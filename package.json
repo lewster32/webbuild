@@ -8,8 +8,8 @@
     "build": "webpack"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Lewis Lane",
+  "license": "MIT",
   "devDependencies": {
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.9"

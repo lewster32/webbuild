@@ -27,5 +27,8 @@ export default class Wall extends Point2 {
     this.loTag = 0;
     this.hiTag = 0;
     this.extra = -1;
+
+    this.editorMeta = {};
+    this.rendererMeta = {};
   }
 };

@@ -10,5 +10,8 @@ export default class Sector {
     this.loTag = 0;
     this.hiTag = 0;
     this.extra = -1;
+
+    this.editorMeta = {};
+    this.rendererMeta = {};
   }
 };
