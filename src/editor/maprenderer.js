@@ -43,7 +43,8 @@ export default class MapRenderer {
       panOffset: new Point2(this.width * -0.5, this.height * -0.5),
       isDown: false,
       mouseWorldPos: new Point2(),
-      mouseScreenPos: new Point2()
+      mouseScreenPos: new Point2(),
+      pointDistanceRadius: 512 // this defines the radius at which a point such as a sprite or a vertex will override the nearest wall algorithm
     };
 
     $(this.canvas).on("mousedown", e => {
@@ -143,7 +144,7 @@ export default class MapRenderer {
       const closestSpriteDistance = Point2.distanceSquared(
         spritePos,
         pos
-      );
+      ) - this.interaction.pointDistanceRadius;
       closest =
         closestWallDistance < closestSpriteDistance
           ? closestWall
@@ -195,7 +196,7 @@ export default class MapRenderer {
       }
       const spritePos = sprite.clone();
 
-      const spriteDistance = Point2.distanceSquared(spritePos, pos);
+      const spriteDistance = Point2.distanceSquared(spritePos, pos) - this.interaction.pointDistanceRadius;
       if (spriteDistance < distance) {
         distance = spriteDistance;
         closest = sprite;
@@ -230,7 +231,7 @@ export default class MapRenderer {
     );
     this.map = map;
     this.zoom = 1 / DIVIDER;
-    this.updateEditorMetaData();
+    this.updateMetaData();
   }
 
   drawLine(ctx, x1, y1, x2, y2, batched) {
@@ -735,8 +736,10 @@ export default class MapRenderer {
     return 1024;
   }
 
-  updateEditorMetaData() {
+  updateMetaData() {
     this.map.walls.forEach((wall, index) => {
+      wall.editorMeta = {};
+      wall.rendererMeta = {};
       wall.editorMeta.index = index;
       const wall2 = this.map.walls[wall.point2];
       if (wall2) {
@@ -750,8 +753,11 @@ export default class MapRenderer {
 
     // Associate sectors with walls and vice versa
     this.map.sectors.forEach((sector, index) => {
+      sector.editorMeta = {};
+      sector.rendererMeta = {};
       sector.editorMeta.index = index;
       sector.editorMeta.walls = this.map.walls.slice(sector.firstWallIndex, sector.firstWallIndex + sector.numWalls);
+      sector.editorMeta.sprites = [];
 
       let lastWallIndex = Number.POSITIVE_INFINITY;
       let loop = 1;
@@ -765,6 +771,14 @@ export default class MapRenderer {
       })
 
       sector.editorMeta.numLoops = loop;
+    });
+
+    this.map.sprites.forEach((sprite, index) => {
+      sprite.editorMeta = {};
+      sprite.rendererMeta = {};
+      sprite.editorMeta.index = index;
+      sprite.editorMeta.sector = this.map.sectors[sprite.currentSectorIndex];
+      sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
     });
   }
 
