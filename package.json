@@ -1,0 +1,21 @@
+{
+  "name": "webbuild",
+  "version": "0.0.5",
+  "description": "An editor for Duke Nukem 3D maps using (reasonably) modern web tech",
+  "private": true,
+  "scripts": {
+    "watch": "webpack --watch",
+    "build": "webpack"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.9"
+  },
+  "dependencies": {
+    "gsap": "^2.1.3",
+    "jquery": "^3.4.1"
+  }
+}
