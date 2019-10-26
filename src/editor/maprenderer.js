@@ -1,12 +1,12 @@
-import $ from 'jquery';
-import TweenMax from 'gsap';
+import $ from "jquery";
+import TweenMax from "gsap";
 
-import NAMES from '../data/names'
+import NAMES from "../data/names";
 
-import Wall from '../objects/wall';
-import Sprite from '../objects/sprite';
+import Wall from "../objects/wall";
+import Sprite from "../objects/sprite";
 
-import Point2 from '../geom/point2';
+import Point2 from "../geom/point2";
 
 const DIVIDER = Math.pow(2, 7);
 
@@ -25,10 +25,10 @@ export default class MapRenderer {
       this.canvas.height = this.height;
     });
 
-    this.mapBufferCtx = canvas.getContext("2d", { alpha: false });
+    this.ctx = canvas.getContext("2d", { alpha: false });
     this.map = null;
 
-    this.zoom = 1 / DIVIDER;
+    this._zoom = 1 / DIVIDER;
 
     this.spritesZoomThreshold = 3 / DIVIDER;
     this.spriteAnglesZoomThreshold = 4 / DIVIDER;
@@ -47,69 +47,19 @@ export default class MapRenderer {
       pointDistanceRadius: 512 // this defines the radius at which a point such as a sprite or a vertex will override the nearest wall algorithm
     };
 
-    $(this.canvas).on("mousedown", e => {
-      this.handleMouseDown(e);
-    });
-    $(this.canvas).on("mouseup", e => {
-      this.handleMouseUp(e);
-    });
-    $(this.canvas).on("mousemove", e => {
-      this.handleMouseMove(e);
-    });
-    $(this.canvas).on("mousewheel", e => {
-      this.handleMouseWheel(e);
-    });
-
     requestAnimationFrame(this.render.bind(this));
   }
 
-  handleMouseDown(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    this.interaction.panStart.set(e.clientX, e.clientY);
-    this.interaction.isDown = true;
-  }
-
-  handleMouseUp(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    this.interaction.panStart.set(0, 0);
-    this.interaction.isDown = false;
-  }
-
-  handleMouseMove(e) {
-    this.interaction.mouseWorldPos = this.screenToWorld(e.offsetX, e.offsetY);
-    this.interaction.mouseScreenPos.x = e.offsetX;
-    this.interaction.mouseScreenPos.y = e.offsetY;
-
-    if (!this.interaction.isDown) {
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-
-    this.interaction.panOffset.x -=
-      (e.clientX - this.interaction.panStart.x) / this.zoom;
-    this.interaction.panOffset.y -=
-      (e.clientY - this.interaction.panStart.y) / this.zoom;
-    this.interaction.panStart.set(e.clientX, e.clientY);
-  }
-
-  handleMouseWheel(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
+  changeZoom(delta, e, callback) {
     const beforeZoomPos = this.screenToWorld(e.offsetX, e.offsetY);
 
-    let newZoom = this.zoom;
-    if (e.originalEvent.deltaY > 0) {
+    let newZoom = this._zoom;
+    if (delta > 0) {
       newZoom /= 1.4;
       if (newZoom < 0.5 / DIVIDER) {
         newZoom = 0.5 / DIVIDER;
       }
-    } else if (e.originalEvent.deltaY < 0) {
+    } else if (delta < 0) {
       newZoom *= 1.4;
       if (newZoom > 150 / DIVIDER) {
         newZoom = 150 / DIVIDER;
@@ -117,109 +67,36 @@ export default class MapRenderer {
     }
 
     TweenMax.to(this, 0.15, {
-      zoom: newZoom,
+      _zoom: newZoom,
       onUpdate: () => {
         const afterZoomPos = this.screenToWorld(e.offsetX, e.offsetY);
 
         this.interaction.panOffset.x += beforeZoomPos.x - afterZoomPos.x;
         this.interaction.panOffset.y += beforeZoomPos.y - afterZoomPos.y;
+      },
+      onComplete: () => {
+        if (callback) {
+          callback(this._zoom);
+        }
       }
     });
   }
 
-  findClosestObject(pos) {
-    const closestWall = this.findClosestWall(pos);
-    const closestSprite = this.findClosestSprite(pos);
-
-    this.findCurrentSector(pos);
-
-    let closest;
-    if (closestWall && closestSprite) {
-      const closestWallDistance = Point2.distanceSquared(
-        Point2.closestPointOnLine(closestWall, this.map.walls[closestWall.point2], pos).point,
-        pos
-      );
-
-      const spritePos = closestSprite.clone();
-      const closestSpriteDistance = Point2.distanceSquared(
-        spritePos,
-        pos
-      ) - this.interaction.pointDistanceRadius;
-      closest =
-        closestWallDistance < closestSpriteDistance
-          ? closestWall
-          : closestSprite;
-    } else if (closestSprite) {
-      closest = closestSprite;
-    } else if (closestWall) {
-      closest = closestWall;
-    }
-    if (closest) {
-      closest.rendererMeta.highlighted = true;
-    }
-    return closest;
-  }
-
-  findClosestWall(pos) {
-    let distance = Number.POSITIVE_INFINITY;
-    let closest;
-    this.map.walls.forEach(wall => {
-      wall.rendererMeta.highlighted = false;
-      if (wall.rendererMeta.clipped) {
-        return;
-      }
-      const wallPos = Point2.closestPointOnLine(wall, this.map.walls[wall.point2], pos);
-
-      if (wallPos.dot < 1) {
-        return;
-      }
-
-      const wallDistance = Point2.distanceSquared(wallPos.point, pos);
-      if (wallDistance < distance) {
-        distance = wallDistance;
-        closest = wall;
-      }
-    });
-    return closest;
-  }
-
-  findClosestSprite(pos) {
-    if (this.zoom <= this.spritesZoomThreshold) {
-      return;
-    }
-    let distance = Number.POSITIVE_INFINITY;
-    let closest;
-    this.map.sprites.forEach(sprite => {
-      sprite.rendererMeta.highlighted = false;
-      if (sprite.rendererMeta.clipped) {
-        return;
-      }
-      const spritePos = sprite.clone();
-
-      const spriteDistance = Point2.distanceSquared(spritePos, pos) - this.interaction.pointDistanceRadius;
-      if (spriteDistance < distance) {
-        distance = spriteDistance;
-        closest = sprite;
-      }
-    });
-    return closest;
-  }
-
-  findCurrentSector(pos) {
-    return this.findClosestWall(pos).editorMeta.sector;
+  get zoom() {
+    return this._zoom;
   }
 
   worldToScreen(wx, wy) {
     return new Point2(
-      (wx - this.interaction.panOffset.x) * this.zoom,
-      (wy - this.interaction.panOffset.y) * this.zoom
+      (wx - this.interaction.panOffset.x) * this._zoom,
+      (wy - this.interaction.panOffset.y) * this._zoom
     );
   }
 
   screenToWorld(sx, sy) {
     return new Point2(
-      sx / this.zoom + this.interaction.panOffset.x,
-      sy / this.zoom + this.interaction.panOffset.y
+      sx / this._zoom + this.interaction.panOffset.x,
+      sy / this._zoom + this.interaction.panOffset.y
     );
   }
 
@@ -230,12 +107,11 @@ export default class MapRenderer {
       this.height * DIVIDER * -0.5
     );
     this.map = map;
-    this.zoom = 1 / DIVIDER;
-    this.updateMetaData();
+    this._zoom = 1 / DIVIDER;
   }
 
   drawLine(ctx, x1, y1, x2, y2, batched) {
-    ctx = ctx || this.mapBufferCtx;
+    ctx = ctx || this.ctx;
     if (!batched) {
       ctx.strokeStyle = ctx.fillStyle;
       ctx.beginPath();
@@ -249,7 +125,7 @@ export default class MapRenderer {
 
   drawCircle(ctx, x0, y0, radius, batched) {
     if (!batched) {
-      ctx = ctx || this.mapBufferCtx;
+      ctx = ctx || this.ctx;
       ctx.strokeStyle = ctx.fillStyle;
       ctx.beginPath();
     }
@@ -275,7 +151,7 @@ export default class MapRenderer {
     pcy,
     batched
   ) {
-    if (this.zoom <= this.wallNormalsZoomThreshold) {
+    if (this._zoom <= this.wallNormalsZoomThreshold) {
       return;
     }
     let angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
@@ -301,8 +177,12 @@ export default class MapRenderer {
     p2y,
     batched
   ) {
-    const pc = Point2.closestPointOnLine(new Point2(p1x, p1y), new Point2(p2x, p2y), this.interaction.mouseScreenPos)
-    const normalIndicatorMagnitudeHalf = normalIndicatorMagnitude * .5;
+    const pc = Point2.closestPointOnLine(
+      new Point2(p1x, p1y),
+      new Point2(p2x, p2y),
+      this.interaction.mouseScreenPos
+    );
+    const normalIndicatorMagnitudeHalf = normalIndicatorMagnitude * 0.5;
 
     const angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
     const cosAngle = Math.cos(angle);
@@ -325,17 +205,20 @@ export default class MapRenderer {
     );
     const midWalls = this.map.walls.filter(
       wall =>
-        wall.nextSector > -1 && !wall.rendererMeta.highlighted && !wall.stat.blockClipMove
+        wall.nextSector > -1 &&
+        !wall.rendererMeta.highlighted &&
+        !wall.stat.blockClipMove
     );
     const clipWalls = this.map.walls.filter(
       wall =>
-        wall.nextSector > -1 && !wall.rendererMeta.highlighted && wall.stat.blockClipMove
+        wall.nextSector > -1 &&
+        !wall.rendererMeta.highlighted &&
+        wall.stat.blockClipMove
     );
 
     // Mid walls
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(0,128,255,.5)";
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,128,255,.5)";
+    this.ctx.beginPath();
     midWalls.forEach(wall => {
       if (wall.rendererMeta.skip) {
         return;
@@ -344,9 +227,12 @@ export default class MapRenderer {
         this.map.walls[wall.nextWall].rendererMeta.skip = true;
       }
 
-      const pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+      const pc = this.worldToScreen(
+        wall.editorMeta.centroid.x,
+        wall.editorMeta.centroid.y
+      );
 
-      const boundingRadius = wall.rendererMeta.boundingRadius * this.zoom;
+      const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
       if (
         pc.x + boundingRadius < -wallClipPadding ||
         pc.x - boundingRadius > this.width + wallClipPadding ||
@@ -362,10 +248,10 @@ export default class MapRenderer {
       const p1 = this.worldToScreen(wall.x, wall.y);
       const p2 = this.worldToScreen(wall2.x, wall2.y);
 
-      this.drawLine(this.mapBufferCtx, p1.x, p1.y, p2.x, p2.y, true);
+      this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
 
       this.drawNormal(
-        this.mapBufferCtx,
+        this.ctx,
         wall,
         normalIndicatorMagnitude,
         normalIndicatorAngle,
@@ -378,12 +264,11 @@ export default class MapRenderer {
         true
       );
     });
-    this.mapBufferCtx.stroke();
+    this.ctx.stroke();
 
     // Clip walls
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(255,0,255,.5)";
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,0,255,.5)";
+    this.ctx.beginPath();
     clipWalls.forEach(wall => {
       if (wall.rendererMeta.skip) {
         return;
@@ -392,9 +277,12 @@ export default class MapRenderer {
         this.map.walls[wall.nextWall].rendererMeta.skip = true;
       }
 
-      const pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+      const pc = this.worldToScreen(
+        wall.editorMeta.centroid.x,
+        wall.editorMeta.centroid.y
+      );
 
-      const boundingRadius = wall.rendererMeta.boundingRadius * this.zoom;
+      const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
       if (
         pc.x + boundingRadius < -wallClipPadding ||
         pc.x - boundingRadius > this.width + wallClipPadding ||
@@ -411,11 +299,11 @@ export default class MapRenderer {
       const p2 = this.worldToScreen(wall2.x, wall2.y);
 
       if (!wall.rendererMeta.skip) {
-        this.drawLine(this.mapBufferCtx, p1.x, p1.y, p2.x, p2.y, true);
+        this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
       }
 
       this.drawNormal(
-        this.mapBufferCtx,
+        this.ctx,
         wall,
         normalIndicatorMagnitude,
         normalIndicatorAngle,
@@ -428,16 +316,18 @@ export default class MapRenderer {
         true
       );
     });
-    this.mapBufferCtx.stroke();
+    this.ctx.stroke();
 
     // Solid walls
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(255,255,255,.8)";
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255,.8)";
+    this.ctx.beginPath();
     solidWalls.forEach(wall => {
-      const pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+      const pc = this.worldToScreen(
+        wall.editorMeta.centroid.x,
+        wall.editorMeta.centroid.y
+      );
 
-      const boundingRadius = wall.rendererMeta.boundingRadius * this.zoom;
+      const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
       if (
         pc.x + boundingRadius < -wallClipPadding ||
         pc.x - boundingRadius > this.width + wallClipPadding ||
@@ -453,10 +343,10 @@ export default class MapRenderer {
       const p1 = this.worldToScreen(wall.x, wall.y);
       const p2 = this.worldToScreen(wall2.x, wall2.y);
 
-      this.drawLine(this.mapBufferCtx, p1.x, p1.y, p2.x, p2.y, true);
+      this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
 
       this.drawNormal(
-        this.mapBufferCtx,
+        this.ctx,
         wall,
         normalIndicatorMagnitude,
         normalIndicatorAngle,
@@ -469,21 +359,20 @@ export default class MapRenderer {
         true
       );
     });
-    this.mapBufferCtx.stroke();
+    this.ctx.stroke();
 
     // Vertices
-    if (this.zoom > this.verticesZoomThreshold) {
-      this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-        "rgba(0,255,255,.75)";
-      this.mapBufferCtx.beginPath();
+    if (this._zoom > this.verticesZoomThreshold) {
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,255,.75)";
+      this.ctx.beginPath();
       this.map.walls.forEach(wall => {
         if (wall.rendererMeta.clipped || wall.rendererMeta.skip) {
           return;
         }
         const p1 = this.worldToScreen(wall.x, wall.y);
-        this.mapBufferCtx.rect(p1.x - 3, p1.y - 3, 5, 5);
+        this.ctx.rect(p1.x - 3, p1.y - 3, 5, 5);
       });
-      this.mapBufferCtx.stroke();
+      this.ctx.stroke();
     }
 
     // Highlighted wall
@@ -492,15 +381,18 @@ export default class MapRenderer {
       const wall2 = this.map.walls[wall.point2];
       const p1 = this.worldToScreen(wall.x, wall.y);
       const p2 = this.worldToScreen(wall2.x, wall2.y);
-      const pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
-      this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
+      const pc = this.worldToScreen(
+        wall.editorMeta.centroid.x,
+        wall.editorMeta.centroid.y
+      );
+      this.ctx.strokeStyle = this.ctx.fillStyle =
         "rgba(255,255,255," +
         (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
         ")";
-      this.mapBufferCtx.beginPath();
-      this.drawLine(this.mapBufferCtx, p1.x, p1.y, p2.x, p2.y, true);
+      this.ctx.beginPath();
+      this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
       this.drawNormal(
-        this.mapBufferCtx,
+        this.ctx,
         wall,
         normalIndicatorMagnitude,
         normalIndicatorAngle,
@@ -513,7 +405,7 @@ export default class MapRenderer {
         true
       );
       this.drawClosestPointOnWall(
-        this.mapBufferCtx,
+        this.ctx,
         normalIndicatorMagnitude,
         normalIndicatorAngle,
         p1.x,
@@ -521,13 +413,13 @@ export default class MapRenderer {
         p2.x,
         p2.y,
         true
-      )
-      this.mapBufferCtx.stroke();
+      );
+      this.ctx.stroke();
     }
   }
 
   renderSprites(spriteClipPadding, angleIndicatorMagnitude) {
-    if (this.zoom <= this.spritesZoomThreshold) {
+    if (this._zoom <= this.spritesZoomThreshold) {
       return;
     }
     const specialSprites = this.map.sprites.filter(
@@ -539,9 +431,8 @@ export default class MapRenderer {
     const timer = new Date().getTime();
 
     // Special sprites
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(255,128,0,.8)";
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.8)";
+    this.ctx.beginPath();
     specialSprites.forEach(sprite => {
       const p = this.worldToScreen(sprite.x, sprite.y);
       if (
@@ -556,17 +447,17 @@ export default class MapRenderer {
       sprite.rendererMeta.clipped = false;
 
       this.drawCircle(
-        this.mapBufferCtx,
+        this.ctx,
         p.x,
         p.y,
-        this.zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
+        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
         true
       );
 
-      if (this.zoom > this.spriteAnglesZoomThreshold) {
+      if (this._zoom > this.spriteAnglesZoomThreshold) {
         const rads = sprite.angleRadians;
         this.drawLine(
-          this.mapBufferCtx,
+          this.ctx,
           p.x,
           p.y,
           p.x + angleIndicatorMagnitude * Math.cos(rads),
@@ -575,13 +466,12 @@ export default class MapRenderer {
         );
       }
     });
-    this.mapBufferCtx.stroke();
+    this.ctx.stroke();
 
     // Special sprite radii
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(255,128,0,.2)";
-    this.mapBufferCtx.setLineDash([4, 4]);
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.2)";
+    this.ctx.setLineDash([4, 4]);
+    this.ctx.beginPath();
     specialSprites
       .filter(
         sprite =>
@@ -590,29 +480,22 @@ export default class MapRenderer {
       .forEach(sprite => {
         const p = this.worldToScreen(sprite.x, sprite.y);
         if (
-          p.x + sprite.hiTag * this.zoom < -spriteClipPadding ||
-          p.y + sprite.hiTag * this.zoom < -spriteClipPadding ||
-          p.x - sprite.hiTag * this.zoom > this.width + spriteClipPadding ||
-          p.y - sprite.hiTag * this.zoom > this.height + spriteClipPadding
+          p.x + sprite.hiTag * this._zoom < -spriteClipPadding ||
+          p.y + sprite.hiTag * this._zoom < -spriteClipPadding ||
+          p.x - sprite.hiTag * this._zoom > this.width + spriteClipPadding ||
+          p.y - sprite.hiTag * this._zoom > this.height + spriteClipPadding
         ) {
           sprite.rendererMeta.clipped = true;
           return;
         }
-        this.drawCircle(
-          this.mapBufferCtx,
-          p.x,
-          p.y,
-          sprite.hiTag * this.zoom,
-          true
-        );
+        this.drawCircle(this.ctx, p.x, p.y, sprite.hiTag * this._zoom, true);
       });
-    this.mapBufferCtx.stroke();
-    this.mapBufferCtx.setLineDash([]);
+    this.ctx.stroke();
+    this.ctx.setLineDash([]);
 
     // Normal sprites
-    this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
-      "rgba(0,255,128,.8)";
-    this.mapBufferCtx.beginPath();
+    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,128,.8)";
+    this.ctx.beginPath();
     normalSprites.forEach(sprite => {
       const p = this.worldToScreen(sprite.x, sprite.y);
       if (
@@ -627,17 +510,17 @@ export default class MapRenderer {
       sprite.rendererMeta.clipped = false;
 
       this.drawCircle(
-        this.mapBufferCtx,
+        this.ctx,
         p.x,
         p.y,
-        this.zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
+        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
         true
       );
 
-      if (this.zoom > this.spriteAnglesZoomThreshold) {
+      if (this._zoom > this.spriteAnglesZoomThreshold) {
         const rads = sprite.angleRadians;
         this.drawLine(
-          this.mapBufferCtx,
+          this.ctx,
           p.x,
           p.y,
           p.x + angleIndicatorMagnitude * Math.cos(rads),
@@ -646,26 +529,26 @@ export default class MapRenderer {
         );
       }
     });
-    this.mapBufferCtx.stroke();
+    this.ctx.stroke();
 
     // Highlighted sprite
     if (this.closest && Sprite.prototype.isPrototypeOf(this.closest)) {
       const sprite = this.closest;
       const p = this.worldToScreen(sprite.x, sprite.y);
-      this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
+      this.ctx.strokeStyle = this.ctx.fillStyle =
         "rgba(255,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
-      this.mapBufferCtx.beginPath();
+      this.ctx.beginPath();
       this.drawCircle(
-        this.mapBufferCtx,
+        this.ctx,
         p.x,
         p.y,
-        this.zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
+        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
         true
       );
-      if (this.zoom > this.spriteAnglesZoomThreshold) {
+      if (this._zoom > this.spriteAnglesZoomThreshold) {
         const rads = sprite.angleRadians;
         this.drawLine(
-          this.mapBufferCtx,
+          this.ctx,
           p.x,
           p.y,
           p.x + angleIndicatorMagnitude * Math.cos(rads),
@@ -673,24 +556,18 @@ export default class MapRenderer {
           true
         );
       }
-      this.mapBufferCtx.stroke();
+      this.ctx.stroke();
 
       if (NAMES[sprite.picNum] === "MUSICANDSFX") {
-        this.mapBufferCtx.strokeStyle = this.mapBufferCtx.fillStyle =
+        this.ctx.strokeStyle = this.ctx.fillStyle =
           "rgba(255,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
-        this.mapBufferCtx.setLineDash([4, 4]);
-        this.mapBufferCtx.lineDashOffset = (timer / 50) % 8;
-        this.mapBufferCtx.beginPath();
-        this.drawCircle(
-          this.mapBufferCtx,
-          p.x,
-          p.y,
-          sprite.hiTag * this.zoom,
-          true
-        );
-        this.mapBufferCtx.stroke();
-        this.mapBufferCtx.setLineDash([]);
-        this.mapBufferCtx.lineDashOffset = 0;
+        this.ctx.setLineDash([4, 4]);
+        this.ctx.lineDashOffset = (timer / 50) % 8;
+        this.ctx.beginPath();
+        this.drawCircle(this.ctx, p.x, p.y, sprite.hiTag * this._zoom, true);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
       }
     }
   }
@@ -698,13 +575,13 @@ export default class MapRenderer {
   updateMapBuffer() {
     const wallClipPadding = 0;
     const spriteClipPadding = 32;
-    const angleIndicatorMagnitude = 160 * this.zoom;
+    const angleIndicatorMagnitude = 160 * this._zoom;
     const normalIndicatorMagnitude = 6;
     const mapSize = 131072;
 
-    this.renderGrid(this.mapBufferCtx, mapSize, this.gridSizeFromZoom());
+    this.renderGrid(this.ctx, mapSize, this.gridSizeFromZoom());
 
-    this.renderGizmos(this.mapBufferCtx, mapSize);
+    this.renderGizmos(this.ctx, mapSize);
 
     this.renderWalls(wallClipPadding, normalIndicatorMagnitude);
 
@@ -712,73 +589,49 @@ export default class MapRenderer {
   }
 
   gridSizeFromZoom() {
-    if (this.zoom > 1) {
+    if (this._zoom > 1) {
       return 8;
     }
-    if (this.zoom > 0.5) {
+    if (this._zoom > 0.5) {
       return 16;
     }
-    if (this.zoom > 0.25) {
+    if (this._zoom > 0.25) {
       return 32;
     }
-    if (this.zoom > 0.1) {
+    if (this._zoom > 0.1) {
       return 64;
     }
-    if (this.zoom > 0.05) {
+    if (this._zoom > 0.05) {
       return 128;
     }
-    if (this.zoom > 0.025) {
+    if (this._zoom > 0.025) {
       return 256;
     }
-    if (this.zoom > 0.0125) {
+    if (this._zoom > 0.0125) {
       return 512;
     }
     return 1024;
   }
 
   updateMetaData() {
-    this.map.walls.forEach((wall, index) => {
-      wall.editorMeta = {};
+    this.map.walls.forEach(wall => {
       wall.rendererMeta = {};
-      wall.editorMeta.index = index;
       const wall2 = this.map.walls[wall.point2];
       if (wall2) {
         const wall2Pos = wall2.clone();
-        const centroid = wall.clone().centroid(wall2Pos);
-
-        wall.editorMeta.centroid = centroid;
-        wall.rendererMeta.boundingRadius = Point2.distance(wall.editorMeta.centroid, wall2Pos);
+        wall.rendererMeta.boundingRadius = Point2.distance(
+          wall.editorMeta.centroid,
+          wall2Pos
+        );
       }
     });
 
-    // Associate sectors with walls and vice versa
-    this.map.sectors.forEach((sector, index) => {
-      sector.editorMeta = {};
+    this.map.sectors.forEach(sector => {
       sector.rendererMeta = {};
-      sector.editorMeta.index = index;
-      sector.editorMeta.walls = this.map.walls.slice(sector.firstWallIndex, sector.firstWallIndex + sector.numWalls);
-      sector.editorMeta.sprites = [];
-
-      let lastWallIndex = Number.POSITIVE_INFINITY;
-      let loop = 1;
-      sector.editorMeta.walls.forEach(wall => {
-        wall.editorMeta.loop = loop;
-        wall.editorMeta.sector = sector;
-        if (wall.point2 < lastWallIndex) {
-          loop++;
-        }
-        lastWallIndex = wall.point2;
-      })
-
-      sector.editorMeta.numLoops = loop;
     });
 
-    this.map.sprites.forEach((sprite, index) => {
-      sprite.editorMeta = {};
+    this.map.sprites.forEach(sprite => {
       sprite.rendererMeta = {};
-      sprite.editorMeta.index = index;
-      sprite.editorMeta.sector = this.map.sectors[sprite.currentSectorIndex];
-      sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
     });
   }
 
@@ -885,8 +738,9 @@ export default class MapRenderer {
 
   renderGizmos(ctx, mapSize) {
     const gizmoColor = "60,128,160";
-    const gizmoOpacity = .2;
-    ctx.strokeStyle = ctx.fillStyle = "rgba(" + gizmoColor + "," + gizmoOpacity + ")";
+    const gizmoOpacity = 0.2;
+    ctx.strokeStyle = ctx.fillStyle =
+      "rgba(" + gizmoColor + "," + gizmoOpacity + ")";
     ctx.beginPath();
     this.drawLine(
       ctx,
@@ -907,7 +761,7 @@ export default class MapRenderer {
     ctx.stroke();
 
     if (this.currentSector) {
-      ctx.fillStyle = "rgba(" + gizmoColor + "," + (gizmoOpacity * .25) + ")";
+      ctx.fillStyle = "rgba(" + gizmoColor + "," + gizmoOpacity * 0.25 + ")";
       const sectorPath = new Path2D();
       let lastLoop = 0;
       this.currentSector.editorMeta.walls.forEach((wall, i) => {
@@ -923,7 +777,6 @@ export default class MapRenderer {
         sectorPath.lineTo(p2.x, p2.y);
       });
 
-
       sectorPath.closePath();
       ctx.fill(sectorPath);
     }
@@ -931,27 +784,10 @@ export default class MapRenderer {
 
   render() {
     if (this.map) {
-      const closest = this.findClosestObject(this.interaction.mouseWorldPos);
-      const currentSector = this.findCurrentSector(this.interaction.mouseWorldPos);
-      if (this.closest !== closest) {
-        this.closest = closest;
-        if (this.debug) {
-          console.log(this.closest);
-        }
-      }
-      if (this.currentSector !== currentSector) {
-        this.currentSector = currentSector;
-        if (this.debug) {
-          console.log(this.currentSector);
-        }
-      }
-    }
-
-    if (this.map) {
-      this.mapBufferCtx.clearRect(0, 0, this.width, this.height);
+      this.ctx.clearRect(0, 0, this.width, this.height);
       this.updateMapBuffer();
     }
 
     requestAnimationFrame(this.render.bind(this));
   }
-};
+}
