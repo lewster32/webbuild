@@ -20,7 +20,6 @@ $(() => {
       return false;
     }
     $("canvas").show();
-    $(".custom-file-label").html("<em>Loading...</em>");
     const name = files[0].name;
     const reader = new MapFileReader(files[0], map => {
       editor.setMap(map);
