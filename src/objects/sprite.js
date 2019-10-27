@@ -38,4 +38,36 @@ export default class Sprite extends Position {
     this.editorMeta = {};
     this.rendererMeta = {};
   }
+
+  getProps() {
+    const rows = [
+      {
+        name: "Position",
+        type: "Point3",
+        subType: "Int32",
+        value: this.clone()
+      },
+      { name: "Picnum", type: "Int16", value: this.picNum },
+      { name: "Shade", type: "Int8", value: this.shade },
+      { name: "Palette", type: "Uint8", value: this.palette },
+      { name: "Clip Distance", type: "Uint8", value: this.clipDistance },
+      {
+        name: "Repeat",
+        type: "Point2",
+        subType: "Uint8",
+        value: this.repeat
+      },
+      {
+        name: "Offset",
+        type: "Point2",
+        subType: "Uint8",
+        value: this.offset
+      },
+      { name: "Lotag", type: "Int16", value: this.loTag},
+      { name: "Hitag", type: "Int16", value: this.hiTag },
+      { name: "Extra", type: "Int16", value: this.extra }
+    ];
+
+    return rows;
+  }
 };

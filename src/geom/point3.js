@@ -15,7 +15,7 @@ export default class Point3 {
     this.z += deltaZ;
   }
 
-  clone(point) {
+  clone() {
     return new Point3(this.x, this.y, this.z);
   }
 };

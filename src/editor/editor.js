@@ -29,6 +29,10 @@ export default class Editor {
     setTimeout(this.update.bind(this), UPDATE_RATE);
   }
 
+  onUpdate(callback) {
+    this.callback = callback;
+  }
+
   handleMouseDown(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -157,7 +161,7 @@ export default class Editor {
   }
 
   findClosestSprite(pos) {
-    if (this.zoom <= this.spritesZoomThreshold) {
+    if (this.renderer.zoom <= this.renderer.spritesZoomThreshold) {
       return;
     }
     let distance = Number.POSITIVE_INFINITY;
@@ -229,6 +233,12 @@ export default class Editor {
     });
   }
 
+  getClosest() {
+    if (this.closest) {
+      return this.closest;
+    }
+  }
+
   update() {
     if (this.dirty) {
       this.dirty = false;
@@ -251,6 +261,9 @@ export default class Editor {
             console.log(this.currentSector);
           }
         }
+      }
+      if (this.callback) {
+        this.callback(this);
       }
     }
     setTimeout(this.update.bind(this), UPDATE_RATE);

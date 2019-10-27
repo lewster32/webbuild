@@ -1,6 +1,6 @@
 html, body {
   height: 100%;
-  background-color: #122334;
+  background-color: #212121;
   color: #fff;
 }
 
@@ -15,5 +15,6 @@ canvas {
 }
 
 input[type=file] {
+  float: right;
   margin: 1em;
 }
