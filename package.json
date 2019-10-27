@@ -4,8 +4,8 @@
   "description": "An editor for Duke Nukem 3D maps using (reasonably) modern web tech",
   "private": true,
   "scripts": {
-    "watch": "webpack --watch",
-    "build": "webpack"
+    "watch": "webpack --watch --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
   },
   "keywords": [],
   "author": "Lewis Lane",
@@ -16,7 +16,8 @@
     "@babel/preset-react": "^7.6.3",
     "babel-loader": "^8.0.6",
     "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.9"
+    "webpack-cli": "^3.3.9",
+    "webpack-merge": "^4.2.2"
   },
   "dependencies": {
     "gsap": "^2.1.3",
