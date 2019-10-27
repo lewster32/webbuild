@@ -4,7 +4,7 @@ import MapFileReader from "./util/mapfilereader";
 import Editor from "./editor/editor";
 import MapRenderer from "./editor/maprenderer";
 
-// Info below mainly from the following sources:
+// Info mainly from the following sources:
 // - http://www.shikadi.net/moddingwiki/MAP_Format_(Build)
 // - https://github.com/jonof/jfbuild/blob/master/doc/buildinf.txt
 

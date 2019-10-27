@@ -10,6 +10,43 @@ export default class MapFileReader {
     this.readFile(file);
   }
 
+  parseBits(input, flagList) {
+    if (typeof input === "undefined") {
+      throw new Error("An input value must be provided");
+    }
+    if (!flagList) {
+      throw new Error("A flag list must be provided");
+    }
+    const output = {};
+    flagList.forEach(item => {
+      if (!item.name || !item.index) {
+        throw new Error("A name and index must be provided on each flag list item");
+      }
+      // Create a bit mask for the size of item we're wanting to parse
+      // e.g.: 1 = 00000001 = 1, 2 = 00000011 = 3, 4 = 00000111 = 7 etc.
+      const mask = ((1 << (item.size || 1)) - 1);
+
+      // Shift the binary value i number of bits to the right so the
+      // bits we're interested in are shadowed by the mask bits, then
+      // bitwise AND the two values together, e.g:
+      //
+      // input:       11011001 (217)
+      // right shift: 01101100 (108)
+      // right shift: 00110110 (54)
+      // mask:        00000011 (3)
+      // bitwise AND: 00000010 (2)
+      let value = (input >> item.index) & mask;
+
+      // Finally, if we're only looking a single bit value, coerce that
+      // into a boolean.
+      if (!item.size || item.size <= 1) {
+        value = !!value;
+      }
+      output[item.name] = value;
+    });
+    return output;
+  }
+
   parseFile(result) {
     const view = new DataView(result);
 
@@ -42,23 +79,22 @@ export default class MapFileReader {
       sector.ceiling.z = read(view.getInt32);
       sector.floor.z = read(view.getInt32);
 
+
+      const floorCeilingFlagsMap = [
+        { name: "parallaxing", index: 0 },
+        { name: "sloped", index: 1 },
+        { name: "swapXY", index: 2 },
+        { name: "doubleSmooshiness", index: 3 },
+        { name: "xFlip", index: 4 },
+        { name: "yFlip", index: 5 },
+        { name: "alignTextureToFirstWall", index: 6 }
+      ];
+
       const ceilingFlags = read(view.getInt16);
-      sector.ceiling.stat.parallaxing = !!(ceilingFlags >> 0);
-      sector.ceiling.stat.sloped = !!(ceilingFlags >> 1);
-      sector.ceiling.stat.swapXY = !!(ceilingFlags >> 2);
-      sector.ceiling.stat.doubleSmooshiness = !!(ceilingFlags >> 3);
-      sector.ceiling.stat.xFlip = !!(ceilingFlags >> 4);
-      sector.ceiling.stat.yFlip = !!(ceilingFlags >> 5);
-      sector.ceiling.stat.alignTextureToFirstWall = !!(ceilingFlags >> 6);
+      sector.ceiling.stat = this.parseBits(ceilingFlags, floorCeilingFlagsMap);
 
       const floorFlags = read(view.getInt16);
-      sector.floor.stat.parallaxing = !!(floorFlags >> 0);
-      sector.floor.stat.sloped = !!(floorFlags >> 1);
-      sector.floor.stat.swapXY = !!(floorFlags >> 2);
-      sector.floor.stat.doubleSmooshiness = !!(floorFlags >> 3);
-      sector.floor.stat.xFlip = !!(floorFlags >> 4);
-      sector.floor.stat.yFlip = !!(floorFlags >> 5);
-      sector.floor.stat.alignTextureToFirstWall = !!(floorFlags >> 6);
+      sector.floor.stat = this.parseBits(floorFlags, floorCeilingFlagsMap);
 
       sector.ceiling.picNum = read(view.getInt16);
       sector.ceiling.heightNum = read(view.getInt16);
@@ -92,16 +128,18 @@ export default class MapFileReader {
       wall.nextSector = read(view.getInt16);
 
       const wallFlags = read(view.getInt16);
-      wall.stat.blockClipMove = !!(wallFlags >> 0);
-      wall.stat.bottomsInvisibleSwapped = !!(wallFlags >> 1);
-      wall.stat.alignPictureBottom = !!(wallFlags >> 2);
-      wall.stat.xFlip = !!(wallFlags >> 3);
-      wall.stat.mask = !!(wallFlags >> 4);
-      wall.stat.oneWay = !!(wallFlags >> 5);
-      wall.stat.blockHitScan = !!(wallFlags >> 6);
-      wall.stat.translucent = !!(wallFlags >> 7);
-      wall.stat.yFlip = !!(wallFlags >> 8);
-      wall.stat.translucentReverse = !!(wallFlags >> 9);
+      wall.stat = this.parseBits(wallFlags, [
+        { name: "blockClipMove", index: 0 },
+        { name: "bottomsInvisibleSwapped", index: 1 },
+        { name: "alignPictureBottom", index: 2 },
+        { name: "xFlip", index: 3 },
+        { name: "mask", index: 4 },
+        { name: "oneWay", index: 5 },
+        { name: "blockHitScan", index: 6 },
+        { name: "translucent", index: 7 },
+        { name: "yFlip", index: 8 },
+        { name: "translucentReverse", index: 9 }
+      ]);
 
       wall.picNum = read(view.getInt16);
       wall.overPicNum = read(view.getInt16);
@@ -126,6 +164,18 @@ export default class MapFileReader {
       );
 
       const spriteFlags = read(view.getInt16);
+      sprite.stat = this.parseBits(spriteFlags, [
+        { name: "blockClipMove", index: 0 },
+        { name: "translucent", index: 1 },
+        { name: "xFlip", index: 2 },
+        { name: "yFlip", index: 3 },
+        { name: "orientation", index: 4, size: 2 },
+        { name: "oneSided", index: 6 },
+        { name: "realCentered", index: 7 },
+        { name: "blockHitScan", index: 8 },
+        { name: "translucentReverse", index: 9 },
+        { name: "invisible", index: 15 }
+      ]);
 
       sprite.picNum = read(view.getInt16);
       sprite.shade = read(view.getInt8);

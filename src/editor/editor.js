@@ -46,6 +46,10 @@ export default class Editor {
     this.renderer.interaction.panStart.set(0, 0);
     this.renderer.interaction.isDown = false;
 
+    if (this.closest) {
+      console.log(this.closest);
+    }
+
     this.dirty = true;
   }
 
