@@ -19,7 +19,7 @@ export default class MapFileReader {
     }
     const output = {};
     flagList.forEach(item => {
-      if (!item.name || !item.index) {
+      if (!item.name || typeof item.index === "undefined") {
         throw new Error("A name and index must be provided on each flag list item");
       }
       // Create a bit mask for the size of item we're wanting to parse
