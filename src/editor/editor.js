@@ -4,12 +4,18 @@ import Point2 from "../geom/point2";
 
 const UPDATE_RATE = 100; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
 
+export const MODE_PAN = 0;
+export const MODE_SELECT = 1;
+export const MODE_EDIT = 2;
+
 export default class Editor {
   constructor(renderer) {
     this.renderer = renderer;
 
     this.closest;
     this.currentSector;
+
+    this.selected = new Set();
 
     this.dirty = true;
 
@@ -27,6 +33,14 @@ export default class Editor {
     });
 
     setTimeout(this.update.bind(this), UPDATE_RATE);
+
+    this.interaction = {
+      selectionTimer: 0,
+      selectionClickDuration: 150,
+      mode: MODE_PAN
+    };
+
+    this.lastUpdate = new Date().getTime();
   }
 
   onUpdate(callback) {
@@ -37,8 +51,15 @@ export default class Editor {
     e.preventDefault();
     e.stopPropagation();
 
-    this.renderer.interaction.panStart.set(e.clientX, e.clientY);
     this.renderer.interaction.isDown = true;
+
+    if (this.interaction.mode === MODE_PAN) {
+      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+    }
+
+    if (this.interaction.mode === MODE_SELECT) {  
+      this.interaction.selectionTimer = new Date().getTime();
+    }
 
     this.dirty = true;
   }
@@ -47,11 +68,37 @@ export default class Editor {
     e.preventDefault();
     e.stopPropagation();
 
-    this.renderer.interaction.panStart.set(0, 0);
     this.renderer.interaction.isDown = false;
 
-    if (this.closest) {
-      console.log(this.closest);
+    if (this.interaction.mode === MODE_PAN) {
+      this.renderer.interaction.panStart.set(0, 0);
+    }
+
+    if (this.interaction.mode === MODE_SELECT) {  
+      if (this.interaction.selectionTimer + this.interaction.selectionClickDuration > new Date().getTime()) {
+        this.interaction.selectionTimer = 0;
+        if (this.closest) {
+          if (e.originalEvent.shiftKey) {
+            this.selected.add(this.closest);
+          }
+          else if (e.originalEvent.ctrlKey) {
+            if (this.selected.has(this.closest)) {
+              this.selected.delete(this.closest);
+            }
+            else {
+              this.selected.add(this.closest);
+            }
+          }
+          else if (e.originalEvent.altKey) {
+            this.selected.delete(this.closest);
+          }
+          else {
+            this.selected.clear();
+            this.selected.add(this.closest);
+          }
+        }
+        this.renderer.selected = [...this.selected];
+      }
     }
 
     this.dirty = true;
@@ -71,11 +118,27 @@ export default class Editor {
       return;
     }
 
-    this.renderer.interaction.panOffset.x -=
-      (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom;
-    this.renderer.interaction.panOffset.y -=
-      (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom;
-    this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+    if (this.interaction.mode === MODE_SELECT) {
+      if (this.selected.size > 0) {
+        const snap = this.renderer.gridSizeFromZoom();
+        this.selected.forEach(object => {
+          object.x = snap * Math.round(this.renderer.interaction.mouseWorldPos.x / snap);
+          object.y = snap * Math.round(this.renderer.interaction.mouseWorldPos.y / snap);
+        });
+      }
+    }
+
+    if (this.interaction.mode === MODE_PAN) {
+      this.renderer.interaction.panOffset.x -=
+        (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom;
+      this.renderer.interaction.panOffset.y -=
+        (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom;
+      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+    }
+  }
+
+  setMode(mode) {
+    this.interaction.mode = mode;
   }
 
   handleMouseWheel(e) {
@@ -190,7 +253,9 @@ export default class Editor {
 
   updateMetaData() {
     this.map.walls.forEach((wall, index) => {
-      wall.editorMeta = {};
+      wall.editorMeta = {
+        type: "Wall"
+      };
       wall.editorMeta.index = index;
       const wall2 = this.map.walls[wall.point2];
       if (wall2) {
@@ -203,7 +268,9 @@ export default class Editor {
 
     // Associate sectors with walls and vice versa
     this.map.sectors.forEach((sector, index) => {
-      sector.editorMeta = {};
+      sector.editorMeta = {
+        type: "Sector"
+      };
       sector.editorMeta.index = index;
       sector.editorMeta.walls = this.map.walls.slice(
         sector.firstWallIndex,
@@ -226,17 +293,13 @@ export default class Editor {
     });
 
     this.map.sprites.forEach((sprite, index) => {
-      sprite.editorMeta = {};
+      sprite.editorMeta = {
+        type: "Sprite"
+      };
       sprite.editorMeta.index = index;
       sprite.editorMeta.sector = this.map.sectors[sprite.currentSectorIndex];
       sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
     });
-  }
-
-  getClosest() {
-    if (this.closest) {
-      return this.closest;
-    }
   }
 
   update() {
@@ -265,6 +328,7 @@ export default class Editor {
       if (this.callback) {
         this.callback(this);
       }
+      this.lastUpdate = new Date().getTime();
     }
     setTimeout(this.update.bind(this), UPDATE_RATE);
   }

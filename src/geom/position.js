@@ -1,8 +1,8 @@
 import Point3 from '../geom/point3';
 
 // This mainly adds the angle property to allow
-// us to use it for sprite positions etc.
 export default class Position extends Point3 {
+// us to use it for sprite positions etc.
   constructor(x, y, z, angle = 0) {
     super(x, y, z);
     // Angles in the Build engine range from 0-2047
@@ -33,5 +33,13 @@ export default class Position extends Point3 {
   set angleRadians(val) {
     this.angleDegrees = (val / Math.PI) * 180;
     return this.angleRadians;
+  }
+
+  static toDegrees(angle) {
+    return angle / 5.7;
+  }
+
+  static toRadians(angle) {
+    return (Position.toDegrees(angle) * Math.PI) / 180
   }
 };

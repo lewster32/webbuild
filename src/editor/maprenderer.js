@@ -47,6 +47,9 @@ export default class MapRenderer {
       pointDistanceRadius: 512 // this defines the radius at which a point such as a sprite or a vertex will override the nearest wall algorithm
     };
 
+    this.closest = null;
+    this.selected = [];
+
     requestAnimationFrame(this.render.bind(this));
   }
 
@@ -416,6 +419,52 @@ export default class MapRenderer {
       );
       this.ctx.stroke();
     }
+
+    // Selected wall(s)
+    if (this.selected) {
+      const selectedWalls = this.selected.filter(wall => Wall.prototype.isPrototypeOf(wall));
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = this.ctx.fillStyle =
+        "rgba(0,255,255," +
+        (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
+        ")";
+      this.ctx.beginPath();
+      selectedWalls.forEach(wall => {
+        const wall2 = this.map.walls[wall.point2];
+        const p1 = this.worldToScreen(wall.x, wall.y);
+        const p2 = this.worldToScreen(wall2.x, wall2.y);
+        const pc = this.worldToScreen(
+          wall.editorMeta.centroid.x,
+          wall.editorMeta.centroid.y
+        );
+        this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
+        this.drawNormal(
+          this.ctx,
+          wall,
+          normalIndicatorMagnitude,
+          normalIndicatorAngle,
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          pc.x,
+          pc.y,
+          true
+        );
+        this.drawClosestPointOnWall(
+          this.ctx,
+          normalIndicatorMagnitude,
+          normalIndicatorAngle,
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          true
+        );
+      });
+      this.ctx.stroke();
+      this.ctx.lineWidth = 1;
+    }
   }
 
   renderSprites(spriteClipPadding, angleIndicatorMagnitude) {
@@ -569,6 +618,51 @@ export default class MapRenderer {
         this.ctx.setLineDash([]);
         this.ctx.lineDashOffset = 0;
       }
+    }
+
+    // Selected sprite(s)
+    if (this.selected) {
+      const selectedSprites = this.selected.filter(sprite => Sprite.prototype.isPrototypeOf(sprite));
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = this.ctx.fillStyle =
+      "rgba(0,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+      this.ctx.beginPath();
+      selectedSprites.forEach(sprite => {
+        const p = this.worldToScreen(sprite.x, sprite.y);
+        this.drawCircle(
+          this.ctx,
+          p.x,
+          p.y,
+          this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
+          true
+        );
+        if (this._zoom > this.spriteAnglesZoomThreshold) {
+          const rads = sprite.angleRadians;
+          this.drawLine(
+            this.ctx,
+            p.x,
+            p.y,
+            p.x + angleIndicatorMagnitude * Math.cos(rads),
+            p.y + angleIndicatorMagnitude * Math.sin(rads),
+            true
+          );
+        }
+        this.ctx.stroke();
+  
+        if (NAMES[sprite.picNum] === "MUSICANDSFX") {
+          this.ctx.strokeStyle = this.ctx.fillStyle =
+            "rgba(0,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
+          this.ctx.setLineDash([4, 4]);
+          this.ctx.lineDashOffset = (timer / 50) % 8;
+          this.ctx.beginPath();
+          this.drawCircle(this.ctx, p.x, p.y, sprite.hiTag * this._zoom, true);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+          this.ctx.lineDashOffset = 0;
+        }
+      });
+      this.ctx.stroke();
+      this.ctx.lineWidth = 1;
     }
   }
 

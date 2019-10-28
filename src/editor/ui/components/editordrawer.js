@@ -46,7 +46,7 @@ const useStyles = makeStyles(theme => ({
 
 export default function EditorDrawer(props) {
   const [state, setState] = React.useState({
-    open: false
+    open: true
   });
 
   const toggleDrawer = () => {

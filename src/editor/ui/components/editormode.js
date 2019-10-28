@@ -9,9 +9,11 @@ import PanIcon from "@material-ui/icons/OpenWith";
 import SelectIcon from "@material-ui/icons/SelectAll";
 import EditIcon from "@material-ui/icons/Edit";
 
-export default function EditorMode() {
+import { MODE_PAN, MODE_SELECT, MODE_EDIT } from '../../../editor/editor'
+
+export default function EditorMode(props) {
   const [state, setState] = React.useState({
-    mode: 0
+    mode: MODE_PAN
   });
 
   const setMode = mode => {
@@ -20,13 +22,17 @@ export default function EditorMode() {
     });
   };
 
+  React.useEffect(() => {
+    props.editor.setMode(state.mode);
+  });
+
   return (
     <List>
       <ListItem
         button
         key="Pan Mode"
-        selected={state.mode === 0}
-        onClick={event => setMode(0)}
+        selected={state.mode === MODE_PAN}
+        onClick={event => setMode(MODE_PAN)}
       >
         <ListItemIcon>
           <PanIcon />
@@ -36,8 +42,8 @@ export default function EditorMode() {
       <ListItem
         button
         key="Select Mode"
-        selected={state.mode === 1}
-        onClick={event => setMode(1)}
+        selected={state.mode === MODE_SELECT}
+        onClick={event => setMode(MODE_SELECT)}
       >
         <ListItemIcon>
           <SelectIcon />
@@ -47,8 +53,8 @@ export default function EditorMode() {
       <ListItem
         button
         key="Edit Mode"
-        selected={state.mode === 2}
-        onClick={event => setMode(2)}
+        selected={state.mode === MODE_EDIT}
+        onClick={event => setMode(MODE_EDIT)}
       >
         <ListItemIcon>
           <EditIcon />

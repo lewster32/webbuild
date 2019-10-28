@@ -36,28 +36,31 @@ export default class Wall extends Point2 {
     const rows = [
       {
         name: "Position",
+        key: "position",
         type: "Point2",
         subType: "Int32",
         value: this.clone()
       },
-      { name: "Picnum", type: "Int16", value: this.picNum },
-      { name: "Shade", type: "Int8", value: this.shade },
-      { name: "Palette", type: "Uint8", value: this.palette },
+      { name: "Picnum", key: "picNum", type: "Int16", value: this.picNum },
+      { name: "Shade", key: "shade", type: "Int8", value: this.shade },
+      { name: "Palette", key: "palette", type: "Uint8", value: this.palette },
       {
         name: "Repeat",
+        key: "repeat",
         type: "Point2",
         subType: "Uint8",
         value: this.repeat
       },
       {
         name: "Panning",
+        key: "panning",
         type: "Point2",
         subType: "Uint8",
         value: this.panning
       },
-      { name: "Lotag", type: "Int16", value: this.loTag},
-      { name: "Hitag", type: "Int16", value: this.hiTag },
-      { name: "Extra", type: "Int16", value: this.extra }
+      { name: "Lotag", key: "loTag", type: "Int16", value: this.loTag},
+      { name: "Hitag", key: "hiTag", type: "Int16", value: this.hiTag },
+      { name: "Extra", key: "extra", type: "Int16", value: this.extra }
     ];
 
     return rows;
