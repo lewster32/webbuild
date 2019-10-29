@@ -72156,6 +72156,42 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 
 var DIVIDER = Math.pow(2, 7);
+var COLORS = {
+  "default": {
+    background: "18,35,52",
+    innerWalls: "0,128,255",
+    clipWalls: "255,0,255",
+    outerWalls: "255,255,255",
+    vertices: "0,255,255",
+    highlighted: "255,255,255",
+    selected: "0,255,255",
+    specialSprites: "255,128,0",
+    sprites: "0,255,128",
+    grid: "60,128,160",
+    gizmos: "60,128,160"
+  },
+  classic: {
+    background: "0,0,0",
+    innerWalls: "255,0,0",
+    clipWalls: "255,0,255",
+    outerWalls: "255,255,255",
+    vertices: "255,255,255",
+    highlighted: "255,255,255",
+    selected: "0,255,255",
+    specialSprites: "255,255,255",
+    sprites: "0,255,0",
+    grid: "255,255,255",
+    gizmos: "255,255,255"
+  }
+};
+
+function getEditorColor(theme, key) {
+  if (COLORS[theme]) {
+    return COLORS[theme][key];
+  }
+
+  return COLORS["default"][key];
+}
 
 var MapRenderer =
 /*#__PURE__*/
@@ -72166,6 +72202,7 @@ function () {
     _classCallCheck(this, MapRenderer);
 
     this.debug = true;
+    this.theme = "default";
     this.canvas = canvas;
     this.width = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerWidth();
     this.height = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerHeight();
@@ -72345,7 +72382,7 @@ function () {
         return wall.nextSector > -1 && !wall.rendererMeta.highlighted && wall.stat.blockClipMove;
       }); // Mid walls
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,128,255,.5)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "innerWalls"), ",.5)");
       this.ctx.beginPath();
       midWalls.forEach(function (wall) {
         if (wall.rendererMeta.skip) {
@@ -72378,7 +72415,7 @@ function () {
       });
       this.ctx.stroke(); // Clip walls
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,0,255,.5)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "clipWalls"), ",.5)");
       this.ctx.beginPath();
       clipWalls.forEach(function (wall) {
         if (wall.rendererMeta.skip) {
@@ -72413,7 +72450,7 @@ function () {
       });
       this.ctx.stroke(); // Solid walls
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255,.8)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "outerWalls"), ",.8)");
       this.ctx.beginPath();
       solidWalls.forEach(function (wall) {
         var pc = _this3.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
@@ -72439,7 +72476,7 @@ function () {
       this.ctx.stroke(); // Vertices
 
       if (this._zoom > this.verticesZoomThreshold) {
-        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,255,.75)";
+        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "vertices"), ",.75)");
         this.ctx.beginPath();
         this.map.walls.forEach(function (wall) {
           if (wall.rendererMeta.clipped || wall.rendererMeta.skip) {
@@ -72460,7 +72497,7 @@ function () {
         var p1 = this.worldToScreen(wall.x, wall.y);
         var p2 = this.worldToScreen(wall2.x, wall2.y);
         var pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
-        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255," + (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) + ")";
+        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "highlighted"), ",") + (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) + ")";
         this.ctx.beginPath();
         this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
         this.drawNormal(this.ctx, wall, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, pc.x, pc.y, true);
@@ -72474,7 +72511,7 @@ function () {
           return _objects_wall__WEBPACK_IMPORTED_MODULE_3__["default"].prototype.isPrototypeOf(wall);
         });
         this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,255," + (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) + ")";
+        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "selected"), ",") + (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) + ")";
         this.ctx.beginPath();
         selectedWalls.forEach(function (wall) {
           var wall2 = _this3.map.walls[wall.point2];
@@ -72496,6 +72533,31 @@ function () {
       }
     }
   }, {
+    key: "drawSprite",
+    value: function drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude) {
+      var p = this.worldToScreen(sprite.x, sprite.y);
+
+      if (p.x < -spriteClipPadding || p.y < -spriteClipPadding || p.x > this.width + spriteClipPadding || p.y > this.height + spriteClipPadding) {
+        sprite.rendererMeta.clipped = true;
+        return;
+      }
+
+      sprite.rendererMeta.clipped = false;
+      var size = this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2;
+
+      if (sprite.picNum <= 10) {
+        size *= 1.8;
+        this.ctx.rect(p.x - size * .5, p.y - size * .5, size, size);
+      } else {
+        this.drawCircle(this.ctx, p.x, p.y, size, true);
+      }
+
+      if (this._zoom > this.spriteAnglesZoomThreshold) {
+        var rads = sprite.angleRadians;
+        this.drawLine(this.ctx, p.x, p.y, p.x + angleIndicatorMagnitude * Math.cos(rads), p.y + angleIndicatorMagnitude * Math.sin(rads), true);
+      }
+    }
+  }, {
     key: "renderSprites",
     value: function renderSprites(spriteClipPadding, angleIndicatorMagnitude) {
       var _this4 = this;
@@ -72512,29 +72574,14 @@ function () {
       });
       var timer = new Date().getTime(); // Special sprites
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.8)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "specialSprites"), ",.8)");
       this.ctx.beginPath();
       specialSprites.forEach(function (sprite) {
-        var p = _this4.worldToScreen(sprite.x, sprite.y);
-
-        if (p.x < -spriteClipPadding || p.y < -spriteClipPadding || p.x > _this4.width + spriteClipPadding || p.y > _this4.height + spriteClipPadding) {
-          sprite.rendererMeta.clipped = true;
-          return;
-        }
-
-        sprite.rendererMeta.clipped = false;
-
-        _this4.drawCircle(_this4.ctx, p.x, p.y, _this4._zoom > _this4.verticesZoomThreshold * 2 ? 5 : 2, true);
-
-        if (_this4._zoom > _this4.spriteAnglesZoomThreshold) {
-          var rads = sprite.angleRadians;
-
-          _this4.drawLine(_this4.ctx, p.x, p.y, p.x + angleIndicatorMagnitude * Math.cos(rads), p.y + angleIndicatorMagnitude * Math.sin(rads), true);
-        }
+        _this4.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
       });
       this.ctx.stroke(); // Special sprite radii
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.2)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "specialSprites"), ",.2)");
       this.ctx.setLineDash([4, 4]);
       this.ctx.beginPath();
       specialSprites.filter(function (sprite) {
@@ -72552,44 +72599,23 @@ function () {
       this.ctx.stroke();
       this.ctx.setLineDash([]); // Normal sprites
 
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,128,.8)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "sprites"), ",.8)");
       this.ctx.beginPath();
       normalSprites.forEach(function (sprite) {
-        var p = _this4.worldToScreen(sprite.x, sprite.y);
-
-        if (p.x < -spriteClipPadding || p.y < -spriteClipPadding || p.x > _this4.width + spriteClipPadding || p.y > _this4.height + spriteClipPadding) {
-          sprite.rendererMeta.clipped = true;
-          return;
-        }
-
-        sprite.rendererMeta.clipped = false;
-
-        _this4.drawCircle(_this4.ctx, p.x, p.y, _this4._zoom > _this4.verticesZoomThreshold * 2 ? 5 : 2, true);
-
-        if (_this4._zoom > _this4.spriteAnglesZoomThreshold) {
-          var rads = sprite.angleRadians;
-
-          _this4.drawLine(_this4.ctx, p.x, p.y, p.x + angleIndicatorMagnitude * Math.cos(rads), p.y + angleIndicatorMagnitude * Math.sin(rads), true);
-        }
+        _this4.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
       });
       this.ctx.stroke(); // Highlighted sprite
 
       if (this.closest && _objects_sprite__WEBPACK_IMPORTED_MODULE_4__["default"].prototype.isPrototypeOf(this.closest)) {
         var sprite = this.closest;
-        var p = this.worldToScreen(sprite.x, sprite.y);
-        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "highlighted"), ",") + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
         this.ctx.beginPath();
-        this.drawCircle(this.ctx, p.x, p.y, this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2, true);
-
-        if (this._zoom > this.spriteAnglesZoomThreshold) {
-          var rads = sprite.angleRadians;
-          this.drawLine(this.ctx, p.x, p.y, p.x + angleIndicatorMagnitude * Math.cos(rads), p.y + angleIndicatorMagnitude * Math.sin(rads), true);
-        }
-
+        this.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
         this.ctx.stroke();
 
         if (_data_names__WEBPACK_IMPORTED_MODULE_2__["default"][sprite.picNum] === "MUSICANDSFX") {
-          this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
+          var p = this.worldToScreen(sprite.x, sprite.y);
+          this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "highlighted"), ",") + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
           this.ctx.setLineDash([4, 4]);
           this.ctx.lineDashOffset = timer / 50 % 8;
           this.ctx.beginPath();
@@ -72606,23 +72632,17 @@ function () {
           return _objects_sprite__WEBPACK_IMPORTED_MODULE_4__["default"].prototype.isPrototypeOf(sprite);
         });
         this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+        this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "selected"), ",") + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
         this.ctx.beginPath();
         selectedSprites.forEach(function (sprite) {
-          var p = _this4.worldToScreen(sprite.x, sprite.y);
-
-          _this4.drawCircle(_this4.ctx, p.x, p.y, _this4._zoom > _this4.verticesZoomThreshold * 2 ? 5 : 2, true);
-
-          if (_this4._zoom > _this4.spriteAnglesZoomThreshold) {
-            var _rads = sprite.angleRadians;
-
-            _this4.drawLine(_this4.ctx, p.x, p.y, p.x + angleIndicatorMagnitude * Math.cos(_rads), p.y + angleIndicatorMagnitude * Math.sin(_rads), true);
-          }
-
-          _this4.ctx.stroke();
+          _this4.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
 
           if (_data_names__WEBPACK_IMPORTED_MODULE_2__["default"][sprite.picNum] === "MUSICANDSFX") {
-            _this4.ctx.strokeStyle = _this4.ctx.fillStyle = "rgba(0,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
+            var _p = _this4.worldToScreen(sprite.x, sprite.y);
+
+            _this4.ctx.stroke();
+
+            _this4.ctx.strokeStyle = _this4.ctx.fillStyle = "rgba(".concat(getEditorColor(_this4.theme, "selected"), ",") + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
 
             _this4.ctx.setLineDash([4, 4]);
 
@@ -72630,7 +72650,7 @@ function () {
 
             _this4.ctx.beginPath();
 
-            _this4.drawCircle(_this4.ctx, p.x, p.y, sprite.hiTag * _this4._zoom, true);
+            _this4.drawCircle(_this4.ctx, _p.x, _p.y, sprite.hiTag * _this4._zoom, true);
 
             _this4.ctx.stroke();
 
@@ -72715,7 +72735,7 @@ function () {
     value: function renderGrid(ctx, mapSize, step) {
       var majorStep = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 8;
       var gridPadding = 0;
-      var gridColor = "60,128,160";
+      var gridColor = getEditorColor(this.theme, "grid");
       var gridMajorOpacity = 0.1;
       var gridMinorOpacity = 0.05; // Major grid lines
 
@@ -72784,7 +72804,7 @@ function () {
     value: function renderGizmos(ctx, mapSize) {
       var _this6 = this;
 
-      var gizmoColor = "60,128,160";
+      var gizmoColor = getEditorColor(this.theme, "gizmos");
       var gizmoOpacity = 0.2;
       ctx.strokeStyle = ctx.fillStyle = "rgba(" + gizmoColor + "," + gizmoOpacity + ")";
       ctx.beginPath();
@@ -72821,7 +72841,8 @@ function () {
     key: "render",
     value: function render() {
       if (this.map) {
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.ctx.fillStyle = "rgb(".concat(getEditorColor(this.theme, "background"), ")");
+        this.ctx.fillRect(0, 0, this.width, this.height);
         this.updateMapBuffer();
       }
 

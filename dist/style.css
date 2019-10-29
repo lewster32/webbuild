@@ -10,8 +10,6 @@ canvas {
   left: 0;
   top: 0;
   display: block;
-  background-color: #122334;
-  outline: 1px solid #222;
   z-index: 1;
 }
 

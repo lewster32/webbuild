@@ -10,9 +10,47 @@ import Point2 from "../geom/point2";
 
 const DIVIDER = Math.pow(2, 7);
 
+const COLORS = {
+  default: {
+    background: "18,35,52",
+    innerWalls: "0,128,255",
+    clipWalls: "255,0,255",
+    outerWalls: "255,255,255",
+    vertices: "0,255,255",
+    highlighted: "255,255,255",
+    selected: "0,255,255",
+    specialSprites: "255,128,0",
+    sprites: "0,255,128",
+    grid: "60,128,160",
+    gizmos: "60,128,160"
+  },
+  classic: {
+    background: "0,0,0",
+    innerWalls: "255,0,0",
+    clipWalls: "255,0,255",
+    outerWalls: "255,255,255",
+    vertices: "255,255,255",
+    highlighted: "255,255,255",
+    selected: "0,255,255",
+    specialSprites: "255,255,255",
+    sprites: "0,255,0",
+    grid: "255,255,255",
+    gizmos: "255,255,255"
+  }
+};
+
+function getEditorColor(theme, key) {
+  if (COLORS[theme]) {
+    return COLORS[theme][key];
+  }
+  return COLORS.default[key];
+}
+
 export default class MapRenderer {
   constructor(canvas) {
     this.debug = true;
+
+    this.theme = "default";
 
     this.canvas = canvas;
     this.width = $(window).innerWidth();
@@ -237,7 +275,7 @@ export default class MapRenderer {
     );
 
     // Mid walls
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,128,255,.5)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "innerWalls")},.5)`;
     this.ctx.beginPath();
     midWalls.forEach(wall => {
       if (wall.rendererMeta.skip) {
@@ -287,7 +325,7 @@ export default class MapRenderer {
     this.ctx.stroke();
 
     // Clip walls
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,0,255,.5)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "clipWalls")},.5)`;
     this.ctx.beginPath();
     clipWalls.forEach(wall => {
       if (wall.rendererMeta.skip) {
@@ -339,7 +377,7 @@ export default class MapRenderer {
     this.ctx.stroke();
 
     // Solid walls
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,255,255,.8)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "outerWalls")},.8)`;
     this.ctx.beginPath();
     solidWalls.forEach(wall => {
       const pc = this.worldToScreen(
@@ -383,7 +421,7 @@ export default class MapRenderer {
 
     // Vertices
     if (this._zoom > this.verticesZoomThreshold) {
-      this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,255,.75)";
+      this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "vertices")},.75)`;
       this.ctx.beginPath();
       this.map.walls.forEach(wall => {
         if (wall.rendererMeta.clipped || wall.rendererMeta.skip) {
@@ -406,7 +444,7 @@ export default class MapRenderer {
         wall.editorMeta.centroid.y
       );
       this.ctx.strokeStyle = this.ctx.fillStyle =
-        "rgba(255,255,255," +
+        `rgba(${getEditorColor(this.theme, "highlighted")},` +
         (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
         ")";
       this.ctx.beginPath();
@@ -442,7 +480,7 @@ export default class MapRenderer {
       const selectedWalls = this.selected.filter(wall => Wall.prototype.isPrototypeOf(wall));
       this.ctx.lineWidth = 2;
       this.ctx.strokeStyle = this.ctx.fillStyle =
-        "rgba(0,255,255," +
+        `rgba(${getEditorColor(this.theme, "selected")},` +
         (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
         ")";
       this.ctx.beginPath();
@@ -484,6 +522,48 @@ export default class MapRenderer {
     }
   }
 
+  drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude) {
+    const p = this.worldToScreen(sprite.x, sprite.y);
+    if (
+      p.x < -spriteClipPadding ||
+      p.y < -spriteClipPadding ||
+      p.x > this.width + spriteClipPadding ||
+      p.y > this.height + spriteClipPadding
+    ) {
+      sprite.rendererMeta.clipped = true;
+      return;
+    }
+    sprite.rendererMeta.clipped = false;
+
+    let size = this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2;
+
+    if (sprite.picNum <= 10) {
+      size *= 1.8;
+      this.ctx.rect(p.x - size * .5, p.y - size * .5, size, size);
+    }
+    else {
+      this.drawCircle(
+        this.ctx,
+        p.x,
+        p.y,
+        size,
+        true
+      );
+    }
+
+    if (this._zoom > this.spriteAnglesZoomThreshold) {
+      const rads = sprite.angleRadians;
+      this.drawLine(
+        this.ctx,
+        p.x,
+        p.y,
+        p.x + angleIndicatorMagnitude * Math.cos(rads),
+        p.y + angleIndicatorMagnitude * Math.sin(rads),
+        true
+      );
+    }
+  }
+
   renderSprites(spriteClipPadding, angleIndicatorMagnitude) {
     if (this._zoom <= this.spritesZoomThreshold) {
       return;
@@ -497,45 +577,15 @@ export default class MapRenderer {
     const timer = new Date().getTime();
 
     // Special sprites
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.8)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "specialSprites")},.8)`;
     this.ctx.beginPath();
     specialSprites.forEach(sprite => {
-      const p = this.worldToScreen(sprite.x, sprite.y);
-      if (
-        p.x < -spriteClipPadding ||
-        p.y < -spriteClipPadding ||
-        p.x > this.width + spriteClipPadding ||
-        p.y > this.height + spriteClipPadding
-      ) {
-        sprite.rendererMeta.clipped = true;
-        return;
-      }
-      sprite.rendererMeta.clipped = false;
-
-      this.drawCircle(
-        this.ctx,
-        p.x,
-        p.y,
-        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
-        true
-      );
-
-      if (this._zoom > this.spriteAnglesZoomThreshold) {
-        const rads = sprite.angleRadians;
-        this.drawLine(
-          this.ctx,
-          p.x,
-          p.y,
-          p.x + angleIndicatorMagnitude * Math.cos(rads),
-          p.y + angleIndicatorMagnitude * Math.sin(rads),
-          true
-        );
-      }
+      this.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
     });
     this.ctx.stroke();
 
     // Special sprite radii
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(255,128,0,.2)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "specialSprites")},.2)`;
     this.ctx.setLineDash([4, 4]);
     this.ctx.beginPath();
     specialSprites
@@ -560,73 +610,26 @@ export default class MapRenderer {
     this.ctx.setLineDash([]);
 
     // Normal sprites
-    this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(0,255,128,.8)";
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "sprites")},.8)`;
     this.ctx.beginPath();
     normalSprites.forEach(sprite => {
-      const p = this.worldToScreen(sprite.x, sprite.y);
-      if (
-        p.x < -spriteClipPadding ||
-        p.y < -spriteClipPadding ||
-        p.x > this.width + spriteClipPadding ||
-        p.y > this.height + spriteClipPadding
-      ) {
-        sprite.rendererMeta.clipped = true;
-        return;
-      }
-      sprite.rendererMeta.clipped = false;
-
-      this.drawCircle(
-        this.ctx,
-        p.x,
-        p.y,
-        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
-        true
-      );
-
-      if (this._zoom > this.spriteAnglesZoomThreshold) {
-        const rads = sprite.angleRadians;
-        this.drawLine(
-          this.ctx,
-          p.x,
-          p.y,
-          p.x + angleIndicatorMagnitude * Math.cos(rads),
-          p.y + angleIndicatorMagnitude * Math.sin(rads),
-          true
-        );
-      }
+      this.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
     });
     this.ctx.stroke();
 
     // Highlighted sprite
     if (this.closest && Sprite.prototype.isPrototypeOf(this.closest)) {
       const sprite = this.closest;
-      const p = this.worldToScreen(sprite.x, sprite.y);
       this.ctx.strokeStyle = this.ctx.fillStyle =
-        "rgba(255,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+        `rgba(${getEditorColor(this.theme, "highlighted")},` + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
       this.ctx.beginPath();
-      this.drawCircle(
-        this.ctx,
-        p.x,
-        p.y,
-        this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
-        true
-      );
-      if (this._zoom > this.spriteAnglesZoomThreshold) {
-        const rads = sprite.angleRadians;
-        this.drawLine(
-          this.ctx,
-          p.x,
-          p.y,
-          p.x + angleIndicatorMagnitude * Math.cos(rads),
-          p.y + angleIndicatorMagnitude * Math.sin(rads),
-          true
-        );
-      }
+      this.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
       this.ctx.stroke();
 
       if (NAMES[sprite.picNum] === "MUSICANDSFX") {
+        const p = this.worldToScreen(sprite.x, sprite.y);
         this.ctx.strokeStyle = this.ctx.fillStyle =
-          "rgba(255,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
+          `rgba(${getEditorColor(this.theme, "highlighted")},` + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
         this.ctx.setLineDash([4, 4]);
         this.ctx.lineDashOffset = (timer / 50) % 8;
         this.ctx.beginPath();
@@ -642,33 +645,16 @@ export default class MapRenderer {
       const selectedSprites = this.selected.filter(sprite => Sprite.prototype.isPrototypeOf(sprite));
       this.ctx.lineWidth = 2;
       this.ctx.strokeStyle = this.ctx.fillStyle =
-      "rgba(0,255,255," + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+      `rgba(${getEditorColor(this.theme, "selected")},` + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
       this.ctx.beginPath();
       selectedSprites.forEach(sprite => {
-        const p = this.worldToScreen(sprite.x, sprite.y);
-        this.drawCircle(
-          this.ctx,
-          p.x,
-          p.y,
-          this._zoom > this.verticesZoomThreshold * 2 ? 5 : 2,
-          true
-        );
-        if (this._zoom > this.spriteAnglesZoomThreshold) {
-          const rads = sprite.angleRadians;
-          this.drawLine(
-            this.ctx,
-            p.x,
-            p.y,
-            p.x + angleIndicatorMagnitude * Math.cos(rads),
-            p.y + angleIndicatorMagnitude * Math.sin(rads),
-            true
-          );
-        }
-        this.ctx.stroke();
+        this.drawSprite(sprite, spriteClipPadding, angleIndicatorMagnitude);
   
         if (NAMES[sprite.picNum] === "MUSICANDSFX") {
+          const p = this.worldToScreen(sprite.x, sprite.y);
+          this.ctx.stroke();
           this.ctx.strokeStyle = this.ctx.fillStyle =
-            "rgba(0,255,255," + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
+          `rgba(${getEditorColor(this.theme, "selected")},` + (Math.sin(timer / 50) * 0.05 + 0.2) + ")";
           this.ctx.setLineDash([4, 4]);
           this.ctx.lineDashOffset = (timer / 50) % 8;
           this.ctx.beginPath();
@@ -748,7 +734,7 @@ export default class MapRenderer {
 
   renderGrid(ctx, mapSize, step, majorStep = 8) {
     const gridPadding = 0;
-    const gridColor = "60,128,160";
+    const gridColor = getEditorColor(this.theme, "grid");
     const gridMajorOpacity = 0.1;
     const gridMinorOpacity = 0.05;
 
@@ -848,7 +834,7 @@ export default class MapRenderer {
   }
 
   renderGizmos(ctx, mapSize) {
-    const gizmoColor = "60,128,160";
+    const gizmoColor = getEditorColor(this.theme, "gizmos");
     const gizmoOpacity = 0.2;
     ctx.strokeStyle = ctx.fillStyle =
       "rgba(" + gizmoColor + "," + gizmoOpacity + ")";
@@ -895,7 +881,8 @@ export default class MapRenderer {
 
   render() {
     if (this.map) {
-      this.ctx.clearRect(0, 0, this.width, this.height);
+      this.ctx.fillStyle = `rgb(${getEditorColor(this.theme, "background")})`;
+      this.ctx.fillRect(0, 0, this.width, this.height);
       this.updateMapBuffer();
     }
 
