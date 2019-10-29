@@ -39,87 +39,97 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-export default function InfoPanel(props) {
-  const { drawerOpen } = props;
+export default class InfoPanel extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      open: true,
+      selected: null
+    };
+  }
 
-  const [state, setState] = React.useState({
-    open: true
-  });
+  componentDidMount() {
+    this.props.editor.onUpdate(editor => {
+      if (editor.selected && editor.selected.size) {
+        const currentSelection = [...editor.selected][0];
+        this.setState({
+          selected: {
+            index: currentSelection.editorMeta.index,
+            name: `${
+              currentSelection.editorMeta.type
+            } ${currentSelection.editorMeta.index.toString().padStart(6, "0")}`,
+            props: currentSelection.getProps(),
+            original: currentSelection
+          }
+        });
+      } else {
+        this.setState({
+          selected: null
+        });
+      }
+    });
+  }
 
-  const toggleOpen = () => {
-    if (!drawerOpen) {
+  componentWillUnmount() {}
+
+  toggleOpen() {
+    if (this.props.drawerOpen) {
       return;
     }
-    setState({
-      open: !state.open
+    this.setState({
+      open: !this.state.open
     });
-  };
+  }
 
-  return (
-    <List>
-      <ListItem button={drawerOpen} onClick={toggleOpen} key="Info">
-        <ListItemIcon>
-          <InfoIcon />
-        </ListItemIcon>
-        <ListItemText primary="Info" />
-      </ListItem>
-      <Collapse in={state.open && drawerOpen} timeout="auto" unmountOnExit>
-        <InfoCard editor={props.editor} />
-      </Collapse>
-    </List>
-  );
+  render() {
+    return (
+      <List>
+        <ListItem
+          button={this.props.drawerOpen}
+          onClick={this.toggleOpen()}
+          key="Info"
+        >
+          <ListItemIcon>
+            <InfoIcon />
+          </ListItemIcon>
+          <ListItemText primary="Info" />
+        </ListItem>
+        <Collapse
+          in={this.state.open && this.props.drawerOpen}
+          timeout="auto"
+          unmountOnExit
+        >
+          <InfoCard selected={this.state.selected} />
+        </Collapse>
+      </List>
+    );
+  }
 }
 
 function InfoCard(props) {
   const classes = useStyles();
-
-  const [selected, setSelected] = React.useState();
-
-  React.useEffect(() => {
-    props.editor.onUpdate(editor => {
-      if (editor.selected && editor.selected.size) {
-        const currentSelection = [...editor.selected][0];
-        setSelected({
-          index: currentSelection.editorMeta.index,
-          name: `${
-            currentSelection.editorMeta.type
-          } ${currentSelection.editorMeta.index.toString().padStart(6, "0")}`,
-          props: currentSelection.getProps(),
-          original: currentSelection
-        });
-      } else {
-        setSelected(null);
-      }
-    });
-
-    return () => {
-      props.editor.onUpdate(editor => {});
-    }
-  }, [props.editor]);
 
   const updateValue = (object, key) => {
     return (val, subKey) => {
       if (subKey) {
         if (key === "position") {
           object[subKey] = val;
-        }
-        else {
+        } else {
           object[key][subKey] = val;
         }
-      }
-      else {
+      } else {
         object[key] = val;
       }
-    }
-  }
+    };
+  };
 
-  return selected ? (
-    <Card className={classes.nested} key={selected.name}>
+  return props.selected ? (
+    <Card className={classes.nested} key={props.selected.name}>
       <Typography noWrap variant="h6" component="h2" gutterBottom>
-        {selected.name}
+        {props.selected.name}
       </Typography>
 
-      {selected.props.map(row => (
+      {props.selected.props.map(row => (
         <Grid container spacing={2} aria-label="info table" key={row.key}>
           <Grid item xs={5}>
             <Typography noWrap color="textSecondary">
@@ -132,7 +142,7 @@ function InfoCard(props) {
               type={row.type}
               subType={row.subType}
               value={row.value}
-              updateValue={updateValue(selected.original, row.key)}
+              updateValue={updateValue(props.selected.original, row.key)}
             />
           </Grid>
         </Grid>
@@ -199,7 +209,13 @@ function EditorValue(props) {
       return <Checkbox color="default" value={value} />;
     default:
       InputTag = getInputComponentTag(props.type);
-      return <InputTag updateValue={props.updateValue} className={classes.editorInput} value={value} />;
+      return (
+        <InputTag
+          updateValue={props.updateValue}
+          className={classes.editorInput}
+          value={value}
+        />
+      );
   }
 }
 
@@ -337,16 +353,17 @@ class AngleInput extends Int16Input {
   render() {
     return (
       <div>
-      <Input
-        error={!this.state.valid}
-        type="number"
-        inputProps={this.range}
-        value={this.state.value}
-        onChange={this.handleChange}
-      />
-      <Typography variant="body2">(~{Math.round(Position.toDegrees(this.state.value))}°)</Typography>
+        <Input
+          error={!this.state.valid}
+          type="number"
+          inputProps={this.range}
+          value={this.state.value}
+          onChange={this.handleChange}
+        />
+        <Typography variant="body2">
+          (~{Math.round(Position.toDegrees(this.state.value))}°)
+        </Typography>
       </div>
-      );
-      
+    );
   }
 }

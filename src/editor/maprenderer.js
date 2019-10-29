@@ -157,17 +157,34 @@ export default class MapRenderer {
     if (this._zoom <= this.wallNormalsZoomThreshold) {
       return;
     }
-    let angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
-    const cosAngle = Math.cos(angle);
-    const sinAngle = Math.sin(angle);
-    this.drawLine(
-      ctx,
-      pcx,
-      pcy,
-      pcx + normalIndicatorMagnitude * cosAngle,
-      pcy + normalIndicatorMagnitude * sinAngle,
-      batched
-    );
+    const thisSector = wall.editorMeta.sector;
+    const nextSector = wall.nextSector > -1 ? this.map.sectors[wall.nextSector] : null;
+    if (!nextSector || (thisSector.floor.z >= nextSector.floor.z)) {
+      let angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
+      const cosAngle = Math.cos(angle);
+      const sinAngle = Math.sin(angle);
+      this.drawLine(
+        ctx,
+        pcx,
+        pcy,
+        pcx + normalIndicatorMagnitude * cosAngle,
+        pcy + normalIndicatorMagnitude * sinAngle,
+        batched
+      );
+    }
+    if (nextSector && (thisSector.floor.z <= nextSector.floor.z)) {
+      let angle = Math.atan2(p2y - p1y, p2x - p1x) + (normalIndicatorAngle * -1);
+      const cosAngle = Math.cos(angle);
+      const sinAngle = Math.sin(angle);
+      this.drawLine(
+        ctx,
+        pcx,
+        pcy,
+        pcx + normalIndicatorMagnitude * cosAngle,
+        pcy + normalIndicatorMagnitude * sinAngle,
+        batched
+      );
+    }
   }
 
   drawClosestPointOnWall(

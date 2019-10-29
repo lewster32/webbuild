@@ -72298,10 +72298,25 @@ function () {
         return;
       }
 
-      var angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
-      var cosAngle = Math.cos(angle);
-      var sinAngle = Math.sin(angle);
-      this.drawLine(ctx, pcx, pcy, pcx + normalIndicatorMagnitude * cosAngle, pcy + normalIndicatorMagnitude * sinAngle, batched);
+      var thisSector = wall.editorMeta.sector;
+      var nextSector = wall.nextSector > -1 ? this.map.sectors[wall.nextSector] : null;
+
+      if (!nextSector || thisSector.floor.z >= nextSector.floor.z) {
+        var angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle;
+        var cosAngle = Math.cos(angle);
+        var sinAngle = Math.sin(angle);
+        this.drawLine(ctx, pcx, pcy, pcx + normalIndicatorMagnitude * cosAngle, pcy + normalIndicatorMagnitude * sinAngle, batched);
+      }
+
+      if (nextSector && thisSector.floor.z <= nextSector.floor.z) {
+        var _angle = Math.atan2(p2y - p1y, p2x - p1x) + normalIndicatorAngle * -1;
+
+        var _cosAngle = Math.cos(_angle);
+
+        var _sinAngle = Math.sin(_angle);
+
+        this.drawLine(ctx, pcx, pcy, pcx + normalIndicatorMagnitude * _cosAngle, pcy + normalIndicatorMagnitude * _sinAngle, batched);
+      }
     }
   }, {
     key: "drawClosestPointOnWall",
@@ -73059,23 +73074,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _material_ui_icons_Info__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! @material-ui/icons/Info */ "./node_modules/@material-ui/icons/Info.js");
 /* harmony import */ var _material_ui_icons_Info__WEBPACK_IMPORTED_MODULE_13___default = /*#__PURE__*/__webpack_require__.n(_material_ui_icons_Info__WEBPACK_IMPORTED_MODULE_13__);
 /* harmony import */ var _geom_position__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../../geom/position */ "./src/geom/position.js");
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
-
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
-
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
@@ -73085,13 +73092,21 @@ function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.
 
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 
 
@@ -73128,68 +73143,89 @@ var useStyles = Object(_material_ui_core_styles__WEBPACK_IMPORTED_MODULE_1__["ma
     }
   };
 });
-function InfoPanel(props) {
-  var drawerOpen = props.drawerOpen;
 
-  var _React$useState = react__WEBPACK_IMPORTED_MODULE_0___default.a.useState({
-    open: true
-  }),
-      _React$useState2 = _slicedToArray(_React$useState, 2),
-      state = _React$useState2[0],
-      setState = _React$useState2[1];
+var InfoPanel =
+/*#__PURE__*/
+function (_React$Component) {
+  _inherits(InfoPanel, _React$Component);
 
-  var toggleOpen = function toggleOpen() {
-    if (!drawerOpen) {
-      return;
+  function InfoPanel(props) {
+    var _this;
+
+    _classCallCheck(this, InfoPanel);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(InfoPanel).call(this, props));
+    _this.state = {
+      open: true,
+      selected: null
+    };
+    return _this;
+  }
+
+  _createClass(InfoPanel, [{
+    key: "componentDidMount",
+    value: function componentDidMount() {
+      var _this2 = this;
+
+      this.props.editor.onUpdate(function (editor) {
+        if (editor.selected && editor.selected.size) {
+          var currentSelection = _toConsumableArray(editor.selected)[0];
+
+          _this2.setState({
+            selected: {
+              index: currentSelection.editorMeta.index,
+              name: "".concat(currentSelection.editorMeta.type, " ").concat(currentSelection.editorMeta.index.toString().padStart(6, "0")),
+              props: currentSelection.getProps(),
+              original: currentSelection
+            }
+          });
+        } else {
+          _this2.setState({
+            selected: null
+          });
+        }
+      });
     }
+  }, {
+    key: "componentWillUnmount",
+    value: function componentWillUnmount() {}
+  }, {
+    key: "toggleOpen",
+    value: function toggleOpen() {
+      if (this.props.drawerOpen) {
+        return;
+      }
 
-    setState({
-      open: !state.open
-    });
-  };
+      this.setState({
+        open: !this.state.open
+      });
+    }
+  }, {
+    key: "render",
+    value: function render() {
+      return react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_List__WEBPACK_IMPORTED_MODULE_4__["default"], null, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItem__WEBPACK_IMPORTED_MODULE_5__["default"], {
+        button: this.props.drawerOpen,
+        onClick: this.toggleOpen(),
+        key: "Info"
+      }, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItemIcon__WEBPACK_IMPORTED_MODULE_6__["default"], null, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_icons_Info__WEBPACK_IMPORTED_MODULE_13___default.a, null)), react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItemText__WEBPACK_IMPORTED_MODULE_7__["default"], {
+        primary: "Info"
+      })), react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Collapse__WEBPACK_IMPORTED_MODULE_8__["default"], {
+        "in": this.state.open && this.props.drawerOpen,
+        timeout: "auto",
+        unmountOnExit: true
+      }, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(InfoCard, {
+        selected: this.state.selected
+      })));
+    }
+  }]);
 
-  return react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_List__WEBPACK_IMPORTED_MODULE_4__["default"], null, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItem__WEBPACK_IMPORTED_MODULE_5__["default"], {
-    button: drawerOpen,
-    onClick: toggleOpen,
-    key: "Info"
-  }, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItemIcon__WEBPACK_IMPORTED_MODULE_6__["default"], null, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_icons_Info__WEBPACK_IMPORTED_MODULE_13___default.a, null)), react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_ListItemText__WEBPACK_IMPORTED_MODULE_7__["default"], {
-    primary: "Info"
-  })), react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Collapse__WEBPACK_IMPORTED_MODULE_8__["default"], {
-    "in": state.open && drawerOpen,
-    timeout: "auto",
-    unmountOnExit: true
-  }, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(InfoCard, {
-    editor: props.editor
-  })));
-}
+  return InfoPanel;
+}(react__WEBPACK_IMPORTED_MODULE_0___default.a.Component);
+
+
 
 function InfoCard(props) {
   var classes = useStyles();
-
-  var _React$useState3 = react__WEBPACK_IMPORTED_MODULE_0___default.a.useState(),
-      _React$useState4 = _slicedToArray(_React$useState3, 2),
-      selected = _React$useState4[0],
-      setSelected = _React$useState4[1];
-
-  react__WEBPACK_IMPORTED_MODULE_0___default.a.useEffect(function () {
-    props.editor.onUpdate(function (editor) {
-      if (editor.selected && editor.selected.size) {
-        var currentSelection = _toConsumableArray(editor.selected)[0];
-
-        setSelected({
-          index: currentSelection.editorMeta.index,
-          name: "".concat(currentSelection.editorMeta.type, " ").concat(currentSelection.editorMeta.index.toString().padStart(6, "0")),
-          props: currentSelection.getProps(),
-          original: currentSelection
-        });
-      } else {
-        setSelected(null);
-      }
-    });
-    return function () {
-      props.editor.onUpdate(function (editor) {});
-    };
-  }, [props.editor]);
 
   var updateValue = function updateValue(object, key) {
     return function (val, subKey) {
@@ -73205,15 +73241,15 @@ function InfoCard(props) {
     };
   };
 
-  return selected ? react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Card__WEBPACK_IMPORTED_MODULE_2__["default"], {
+  return props.selected ? react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Card__WEBPACK_IMPORTED_MODULE_2__["default"], {
     className: classes.nested,
-    key: selected.name
+    key: props.selected.name
   }, react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Typography__WEBPACK_IMPORTED_MODULE_9__["default"], {
     noWrap: true,
     variant: "h6",
     component: "h2",
     gutterBottom: true
-  }, selected.name), selected.props.map(function (row) {
+  }, props.selected.name), props.selected.props.map(function (row) {
     return react__WEBPACK_IMPORTED_MODULE_0___default.a.createElement(_material_ui_core_Grid__WEBPACK_IMPORTED_MODULE_3__["default"], {
       container: true,
       spacing: 2,
@@ -73233,16 +73269,16 @@ function InfoCard(props) {
       type: row.type,
       subType: row.subType,
       value: row.value,
-      updateValue: updateValue(selected.original, row.key)
+      updateValue: updateValue(props.selected.original, row.key)
     })));
   })) : null;
 }
 
 function EditorValue(props) {
-  var _React$useState5 = react__WEBPACK_IMPORTED_MODULE_0___default.a.useState(props.value),
-      _React$useState6 = _slicedToArray(_React$useState5, 2),
-      value = _React$useState6[0],
-      setValue = _React$useState6[1];
+  var _React$useState = react__WEBPACK_IMPORTED_MODULE_0___default.a.useState(props.value),
+      _React$useState2 = _slicedToArray(_React$useState, 2),
+      value = _React$useState2[0],
+      setValue = _React$useState2[1];
 
   var classes = useStyles();
   var InputTag;
@@ -73337,21 +73373,21 @@ function getInputComponentTag(name) {
 
 var EditorInput =
 /*#__PURE__*/
-function (_React$Component) {
-  _inherits(EditorInput, _React$Component);
+function (_React$Component2) {
+  _inherits(EditorInput, _React$Component2);
 
   function EditorInput(props) {
-    var _this;
+    var _this3;
 
     _classCallCheck(this, EditorInput);
 
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(EditorInput).call(this, props));
-    _this.state = {
+    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(EditorInput).call(this, props));
+    _this3.state = {
       value: props.value,
       valid: true
     };
-    _this.handleChange = _this.handleChange.bind(_assertThisInitialized(_this));
-    return _this;
+    _this3.handleChange = _this3.handleChange.bind(_assertThisInitialized(_this3));
+    return _this3;
   }
 
   _createClass(EditorInput, [{
@@ -73370,15 +73406,15 @@ function (_React$Component) {
   }, {
     key: "handleChange",
     value: function handleChange(event) {
-      var _this2 = this;
+      var _this4 = this;
 
       var value = event.target.value;
       this.validate(value, function () {
-        _this2.setState({
+        _this4.setState({
           value: value
         }, function () {
-          if (_this2.state.valid) {
-            _this2.props.updateValue(value, _this2.props.updateValueSubKey || null);
+          if (_this4.state.valid) {
+            _this4.props.updateValue(value, _this4.props.updateValueSubKey || null);
           }
         });
       });
@@ -73404,16 +73440,16 @@ function (_EditorInput) {
   _inherits(Uint8Input, _EditorInput);
 
   function Uint8Input(props) {
-    var _this3;
+    var _this5;
 
     _classCallCheck(this, Uint8Input);
 
-    _this3 = _possibleConstructorReturn(this, _getPrototypeOf(Uint8Input).call(this, props));
-    _this3.range = {
+    _this5 = _possibleConstructorReturn(this, _getPrototypeOf(Uint8Input).call(this, props));
+    _this5.range = {
       min: 0,
       max: 255
     };
-    return _this3;
+    return _this5;
   }
 
   _createClass(Uint8Input, [{
@@ -73452,16 +73488,16 @@ function (_Uint8Input) {
   _inherits(Int8Input, _Uint8Input);
 
   function Int8Input(props) {
-    var _this4;
+    var _this6;
 
     _classCallCheck(this, Int8Input);
 
-    _this4 = _possibleConstructorReturn(this, _getPrototypeOf(Int8Input).call(this, props));
-    _this4.range = {
+    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Int8Input).call(this, props));
+    _this6.range = {
       min: -127,
       max: 127
     };
-    return _this4;
+    return _this6;
   }
 
   return Int8Input;
@@ -73473,16 +73509,16 @@ function (_Uint8Input2) {
   _inherits(Uint16Input, _Uint8Input2);
 
   function Uint16Input(props) {
-    var _this5;
+    var _this7;
 
     _classCallCheck(this, Uint16Input);
 
-    _this5 = _possibleConstructorReturn(this, _getPrototypeOf(Uint16Input).call(this, props));
-    _this5.range = {
+    _this7 = _possibleConstructorReturn(this, _getPrototypeOf(Uint16Input).call(this, props));
+    _this7.range = {
       min: 0,
       max: 65535
     };
-    return _this5;
+    return _this7;
   }
 
   return Uint16Input;
@@ -73494,16 +73530,16 @@ function (_Uint8Input3) {
   _inherits(Int16Input, _Uint8Input3);
 
   function Int16Input(props) {
-    var _this6;
+    var _this8;
 
     _classCallCheck(this, Int16Input);
 
-    _this6 = _possibleConstructorReturn(this, _getPrototypeOf(Int16Input).call(this, props));
-    _this6.range = {
+    _this8 = _possibleConstructorReturn(this, _getPrototypeOf(Int16Input).call(this, props));
+    _this8.range = {
       min: -32767,
       max: 32767
     };
-    return _this6;
+    return _this8;
   }
 
   return Int16Input;
@@ -73515,16 +73551,16 @@ function (_Uint8Input4) {
   _inherits(Uint32Input, _Uint8Input4);
 
   function Uint32Input(props) {
-    var _this7;
+    var _this9;
 
     _classCallCheck(this, Uint32Input);
 
-    _this7 = _possibleConstructorReturn(this, _getPrototypeOf(Uint32Input).call(this, props));
-    _this7.range = {
+    _this9 = _possibleConstructorReturn(this, _getPrototypeOf(Uint32Input).call(this, props));
+    _this9.range = {
       min: 0,
       max: 4294967295
     };
-    return _this7;
+    return _this9;
   }
 
   return Uint32Input;
@@ -73536,16 +73572,16 @@ function (_Uint8Input5) {
   _inherits(Int32Input, _Uint8Input5);
 
   function Int32Input(props) {
-    var _this8;
+    var _this10;
 
     _classCallCheck(this, Int32Input);
 
-    _this8 = _possibleConstructorReturn(this, _getPrototypeOf(Int32Input).call(this, props));
-    _this8.range = {
+    _this10 = _possibleConstructorReturn(this, _getPrototypeOf(Int32Input).call(this, props));
+    _this10.range = {
       min: -2147483647,
       max: 2147483647
     };
-    return _this8;
+    return _this10;
   }
 
   return Int32Input;
