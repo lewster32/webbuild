@@ -71772,6 +71772,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _geom_point2__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../geom/point2 */ "./src/geom/point2.js");
+/* harmony import */ var _objects_wall__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../objects/wall */ "./src/objects/wall.js");
+/* harmony import */ var _objects_sprite__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../objects/sprite */ "./src/objects/sprite.js");
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
@@ -71788,7 +71790,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 
 
-var UPDATE_RATE = 100; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
+
+
+var UPDATE_RATE = 50; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
 
 var MODE_PAN = 0;
 var MODE_SELECT = 1;
@@ -71807,6 +71811,7 @@ function () {
     this.currentSector;
     this.selected = new Set();
     this.dirty = true;
+    this.metaDirty = false;
     jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer.canvas).on("mousedown", function (e) {
       _this.handleMouseDown(e);
     });
@@ -71839,13 +71844,13 @@ function () {
       e.preventDefault();
       e.stopPropagation();
       this.renderer.interaction.isDown = true;
-
-      if (this.interaction.mode === MODE_PAN) {
-        this.renderer.interaction.panStart.set(e.clientX, e.clientY);
-      }
+      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
 
       if (this.interaction.mode === MODE_SELECT) {
         this.interaction.selectionTimer = new Date().getTime();
+        this.selected.forEach(function (object) {
+          object.editorTemp.oldPos = object.clone();
+        });
       }
 
       this.dirty = true;
@@ -71856,29 +71861,42 @@ function () {
       e.preventDefault();
       e.stopPropagation();
       this.renderer.interaction.isDown = false;
-
-      if (this.interaction.mode === MODE_PAN) {
-        this.renderer.interaction.panStart.set(0, 0);
-      }
+      this.renderer.interaction.panStart.set(0, 0);
 
       if (this.interaction.mode === MODE_SELECT) {
         if (this.interaction.selectionTimer + this.interaction.selectionClickDuration > new Date().getTime()) {
+          var newSelection;
           this.interaction.selectionTimer = 0;
 
           if (this.closest) {
             if (e.originalEvent.shiftKey) {
               this.selected.add(this.closest);
+              newSelection = this.closest;
             } else if (e.originalEvent.ctrlKey) {
               if (this.selected.has(this.closest)) {
                 this.selected["delete"](this.closest);
               } else {
                 this.selected.add(this.closest);
+                newSelection = this.closest;
               }
             } else if (e.originalEvent.altKey) {
               this.selected["delete"](this.closest);
             } else {
               this.selected.clear();
               this.selected.add(this.closest);
+              newSelection = this.closest;
+            }
+          } // const walls = [...this.selected];
+
+
+          var lastWall = newSelection;
+
+          if (_objects_wall__WEBPACK_IMPORTED_MODULE_2__["default"].prototype.isPrototypeOf(lastWall)) {
+            this.selected.add(lastWall.editorMeta.wall2);
+
+            if (lastWall.editorMeta.nextWall) {
+              this.selected.add(lastWall.editorMeta.nextWall);
+              this.selected.add(lastWall.editorMeta.nextWall.editorMeta.wall2);
             }
           }
 
@@ -71906,9 +71924,10 @@ function () {
         if (this.selected.size > 0) {
           var snap = this.renderer.gridSizeFromZoom();
           this.selected.forEach(function (object) {
-            object.x = snap * Math.round(_this2.renderer.interaction.mouseWorldPos.x / snap);
-            object.y = snap * Math.round(_this2.renderer.interaction.mouseWorldPos.y / snap);
+            object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - _this2.renderer.interaction.panStart.x) / _this2.renderer.zoom) / snap);
+            object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this2.renderer.interaction.panStart.y) / _this2.renderer.zoom) / snap);
           });
+          this.metaDirty = true;
         }
       }
 
@@ -72048,6 +72067,11 @@ function () {
           var wall2Pos = wall2.clone();
           var centroid = wall.clone().centroid(wall2Pos);
           wall.editorMeta.centroid = centroid;
+          wall.editorMeta.wall2 = wall2;
+        }
+
+        if (wall.nextWall > -1) {
+          wall.editorMeta.nextWall = _this6.map.walls[wall.nextWall];
         }
       }); // Associate sectors with walls and vice versa
 
@@ -72080,10 +72104,15 @@ function () {
         sprite.editorMeta.sector = _this6.map.sectors[sprite.currentSectorIndex];
         sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
       });
+      this.metaDirty = false;
     }
   }, {
     key: "update",
     value: function update() {
+      if (this.metaDirty) {
+        this.updateMetaData();
+      }
+
       if (this.dirty) {
         this.dirty = false;
 
@@ -72713,6 +72742,10 @@ function () {
     key: "updateMetaData",
     value: function updateMetaData() {
       var _this5 = this;
+
+      if (!this.map) {
+        return;
+      }
 
       this.map.walls.forEach(function (wall) {
         wall.rendererMeta = {};
@@ -74032,7 +74065,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _util_mapfilereader__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./util/mapfilereader */ "./src/util/mapfilereader.js");
 /* harmony import */ var _editor_editor__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor/editor */ "./src/editor/editor.js");
-/* harmony import */ var _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor/maprenderer */ "./src/editor/maprenderer.js");
+/* harmony import */ var _editor_maprenderer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./editor/maprenderer */ "./src/editor/maprenderer.js");
 /* harmony import */ var _editor_ui_ui_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./editor/ui/ui.js */ "./src/editor/ui/ui.js");
 
 
@@ -74043,7 +74076,7 @@ __webpack_require__.r(__webpack_exports__);
 // - https://github.com/jonof/jfbuild/blob/master/doc/buildinf.txt
 
 jquery__WEBPACK_IMPORTED_MODULE_0___default()(function () {
-  var renderer = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
+  var renderer = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_5__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
   var editor = new _editor_editor__WEBPACK_IMPORTED_MODULE_2__["default"](renderer);
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("canvas").hide();
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapfile").on("change", function (e) {
@@ -74306,6 +74339,7 @@ function (_Position) {
     _this.hiTag = 0;
     _this.extra = -1;
     _this.editorMeta = {};
+    _this.editorTemp = {};
     _this.rendererMeta = {};
     return _this;
   }
@@ -74455,6 +74489,7 @@ function (_Point) {
     _this.hiTag = 0;
     _this.extra = -1;
     _this.editorMeta = {};
+    _this.editorTemp = {};
     _this.rendererMeta = {};
     return _this;
   }

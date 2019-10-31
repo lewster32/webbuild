@@ -56,6 +56,8 @@ export default class MapRenderer {
     this.width = $(window).innerWidth();
     this.height = $(window).innerHeight();
 
+    this.metaDirty = false;
+
     $(window).on("resize", () => {
       this.width = $(window).innerWidth();
       this.height = $(window).innerHeight();
@@ -286,8 +288,8 @@ export default class MapRenderer {
       }
 
       const pc = this.worldToScreen(
-        wall.editorMeta.centroid.x,
-        wall.editorMeta.centroid.y
+        wall.rendererMeta.centroid.x,
+        wall.rendererMeta.centroid.y
       );
 
       const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
@@ -336,8 +338,8 @@ export default class MapRenderer {
       }
 
       const pc = this.worldToScreen(
-        wall.editorMeta.centroid.x,
-        wall.editorMeta.centroid.y
+        wall.rendererMeta.centroid.x,
+        wall.rendererMeta.centroid.y
       );
 
       const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
@@ -381,8 +383,8 @@ export default class MapRenderer {
     this.ctx.beginPath();
     solidWalls.forEach(wall => {
       const pc = this.worldToScreen(
-        wall.editorMeta.centroid.x,
-        wall.editorMeta.centroid.y
+        wall.rendererMeta.centroid.x,
+        wall.rendererMeta.centroid.y
       );
 
       const boundingRadius = wall.rendererMeta.boundingRadius * this._zoom;
@@ -440,8 +442,8 @@ export default class MapRenderer {
       const p1 = this.worldToScreen(wall.x, wall.y);
       const p2 = this.worldToScreen(wall2.x, wall2.y);
       const pc = this.worldToScreen(
-        wall.editorMeta.centroid.x,
-        wall.editorMeta.centroid.y
+        wall.rendererMeta.centroid.x,
+        wall.rendererMeta.centroid.y
       );
       this.ctx.strokeStyle = this.ctx.fillStyle =
         `rgba(${getEditorColor(this.theme, "highlighted")},` +
@@ -489,8 +491,8 @@ export default class MapRenderer {
         const p1 = this.worldToScreen(wall.x, wall.y);
         const p2 = this.worldToScreen(wall2.x, wall2.y);
         const pc = this.worldToScreen(
-          wall.editorMeta.centroid.x,
-          wall.editorMeta.centroid.y
+          wall.rendererMeta.centroid.x,
+          wall.rendererMeta.centroid.y
         );
         this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
         this.drawNormal(
@@ -711,13 +713,19 @@ export default class MapRenderer {
   }
 
   updateMetaData() {
+    if (!this.map) {
+      return;
+    }
     this.map.walls.forEach(wall => {
       wall.rendererMeta = {};
       const wall2 = this.map.walls[wall.point2];
       if (wall2) {
         const wall2Pos = wall2.clone();
+        const centroid = wall.clone().centroid(wall2Pos);
+
+        wall.rendererMeta.centroid = centroid;
         wall.rendererMeta.boundingRadius = Point2.distance(
-          wall.editorMeta.centroid,
+          wall.rendererMetroid.centroid,
           wall2Pos
         );
       }
@@ -730,6 +738,8 @@ export default class MapRenderer {
     this.map.sprites.forEach(sprite => {
       sprite.rendererMeta = {};
     });
+
+    this.metaDirty = false;
   }
 
   renderGrid(ctx, mapSize, step, majorStep = 8) {
@@ -880,6 +890,9 @@ export default class MapRenderer {
   }
 
   render() {
+    if (this.metaDirty) {
+      this.updateMetaData();
+    }
     if (this.map) {
       this.ctx.fillStyle = `rgb(${getEditorColor(this.theme, "background")})`;
       this.ctx.fillRect(0, 0, this.width, this.height);

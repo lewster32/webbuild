@@ -2,6 +2,9 @@ import $ from "jquery";
 
 import Point2 from "../geom/point2";
 
+import Wall from "../objects/wall";
+import Sprite from "../objects/sprite";
+
 const UPDATE_RATE = 100; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
 
 export const MODE_PAN = 0;
@@ -18,6 +21,7 @@ export default class Editor {
     this.selected = new Set();
 
     this.dirty = true;
+    this.metaDirty = false;
 
     $(this.renderer.canvas).on("mousedown", e => {
       this.handleMouseDown(e);
@@ -53,12 +57,14 @@ export default class Editor {
 
     this.renderer.interaction.isDown = true;
 
-    if (this.interaction.mode === MODE_PAN) {
-      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
-    }
+    this.renderer.interaction.panStart.set(e.clientX, e.clientY);
 
     if (this.interaction.mode === MODE_SELECT) {  
       this.interaction.selectionTimer = new Date().getTime();
+
+      this.selected.forEach(object => {
+        object.editorTemp.oldPos = object.clone();
+      });
     }
 
     this.dirty = true;
@@ -70,16 +76,16 @@ export default class Editor {
 
     this.renderer.interaction.isDown = false;
 
-    if (this.interaction.mode === MODE_PAN) {
-      this.renderer.interaction.panStart.set(0, 0);
-    }
+    this.renderer.interaction.panStart.set(0, 0);
 
     if (this.interaction.mode === MODE_SELECT) {  
       if (this.interaction.selectionTimer + this.interaction.selectionClickDuration > new Date().getTime()) {
+        let newSelection;
         this.interaction.selectionTimer = 0;
         if (this.closest) {
           if (e.originalEvent.shiftKey) {
             this.selected.add(this.closest);
+            newSelection = this.closest;
           }
           else if (e.originalEvent.ctrlKey) {
             if (this.selected.has(this.closest)) {
@@ -87,6 +93,7 @@ export default class Editor {
             }
             else {
               this.selected.add(this.closest);
+              newSelection = this.closest;
             }
           }
           else if (e.originalEvent.altKey) {
@@ -95,8 +102,19 @@ export default class Editor {
           else {
             this.selected.clear();
             this.selected.add(this.closest);
+            newSelection = this.closest;
           }
         }
+        // const walls = [...this.selected];
+        const lastWall = newSelection;
+        if (Wall.prototype.isPrototypeOf(lastWall)) {
+          this.selected.add(lastWall.editorMeta.wall2);
+          if (lastWall.editorMeta.nextWall) {
+            this.selected.add(lastWall.editorMeta.nextWall);
+            this.selected.add(lastWall.editorMeta.nextWall.editorMeta.wall2);
+          }
+        }
+
         this.renderer.selected = [...this.selected];
       }
     }
@@ -122,9 +140,11 @@ export default class Editor {
       if (this.selected.size > 0) {
         const snap = this.renderer.gridSizeFromZoom();
         this.selected.forEach(object => {
-          object.x = snap * Math.round(this.renderer.interaction.mouseWorldPos.x / snap);
-          object.y = snap * Math.round(this.renderer.interaction.mouseWorldPos.y / snap);
+          object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom) / snap);
+          object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom) / snap);
         });
+        this.metaDirty = true;
+        this.renderer.metaDirty = true;
       }
     }
 
@@ -263,7 +283,13 @@ export default class Editor {
         const centroid = wall.clone().centroid(wall2Pos);
 
         wall.editorMeta.centroid = centroid;
+        wall.editorMeta.wall2 = wall2;
       }
+
+      if (wall.nextWall > -1) {
+        wall.editorMeta.nextWall = this.map.walls[wall.nextWall];
+      }
+
     });
 
     // Associate sectors with walls and vice versa
@@ -300,9 +326,14 @@ export default class Editor {
       sprite.editorMeta.sector = this.map.sectors[sprite.currentSectorIndex];
       sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
     });
+
+    this.metaDirty = false;
   }
 
   update() {
+    if (this.metaDirty) {
+      this.updateMetaData();
+    }
     if (this.dirty) {
       this.dirty = false;
       if (this.map) {

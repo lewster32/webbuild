@@ -29,6 +29,7 @@ export default class Wall extends Point2 {
     this.extra = -1;
 
     this.editorMeta = {};
+    this.editorTemp = {};
     this.rendererMeta = {};
   }
 

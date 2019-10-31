@@ -36,6 +36,7 @@ export default class Sprite extends Position {
     this.extra = -1;
 
     this.editorMeta = {};
+    this.editorTemp = {};
     this.rendererMeta = {};
   }
 
