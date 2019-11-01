@@ -107,7 +107,7 @@ export default class Editor {
         }
         // const walls = [...this.selected];
         const lastWall = newSelection;
-        if (Wall.prototype.isPrototypeOf(lastWall)) {
+        if (Wall.prototype.isPrototypeOf(lastWall) && !lastWall.rendererMeta.highlightedVertex) {
           this.selected.add(lastWall.editorMeta.wall2);
           if (lastWall.editorMeta.nextWall) {
             this.selected.add(lastWall.editorMeta.nextWall);
@@ -181,38 +181,72 @@ export default class Editor {
   }
 
   findClosestObject(pos) {
+    const closestVertex = this.findClosestVertex(pos);
     const closestWall = this.findClosestWall(pos);
     const closestSprite = this.findClosestSprite(pos);
 
     this.findCurrentSector(pos);
-
     let closest;
-    if (closestWall && closestSprite) {
-      const closestWallDistance = Point2.distanceSquared(
-        Point2.closestPointOnLine(
+
+    const candidates = [];
+
+    if (closestVertex) {
+      candidates.push({
+        type: "vertex",
+        object: closestVertex,
+        distance: Point2.distanceSquared(closestVertex, pos) - (this.renderer.interaction.pointDistanceRadius * 2)
+      });
+    }
+
+    if (closestWall) {
+      candidates.push({
+        type: "wall",
+        object: closestWall,
+        distance: Point2.distanceSquared(Point2.closestPointOnLine(
           closestWall,
           this.map.walls[closestWall.point2],
           pos
-        ).point,
-        pos
-      );
+        ).point, pos)
+      });
+    }
 
-      const spritePos = closestSprite.clone();
-      const closestSpriteDistance =
-        Point2.distanceSquared(spritePos, pos) -
-        this.renderer.interaction.pointDistanceRadius;
-      closest =
-        closestWallDistance < closestSpriteDistance
-          ? closestWall
-          : closestSprite;
-    } else if (closestSprite) {
-      closest = closestSprite;
-    } else if (closestWall) {
-      closest = closestWall;
+    if (closestSprite) {
+      candidates.push({
+        type: "sprite",
+        object: closestSprite,
+        distance: Point2.distanceSquared(closestSprite, pos) - this.renderer.interaction.pointDistanceRadius
+      });
     }
+
+    if (candidates.length) {
+      closest = candidates.sort((a, b) => a.distance < b.distance ? -1 : 1)[0];
+    }
+
     if (closest) {
-      closest.rendererMeta.highlighted = true;
+      if (closest.type === "vertex") {
+        closest.object.rendererMeta.highlightedVertex = true;
+      }
+      else {
+        closest.object.rendererMeta.highlighted = true;
+      }
     }
+    return closest.object;
+  }
+
+  findClosestVertex(pos) {
+    let distance = Number.POSITIVE_INFINITY;
+    let closest;
+    this.map.walls.forEach(wall => {
+      wall.rendererMeta.highlightedVertex = false;
+      if (wall.rendererMeta.clipped) {
+        return;
+      }
+      const wallDistance = Point2.distanceSquared(wall, pos);
+      if (wallDistance < distance) {
+        distance = wallDistance;
+        closest = wall;
+      }
+    });
     return closest;
   }
 

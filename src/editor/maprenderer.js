@@ -437,43 +437,53 @@ export default class MapRenderer {
 
     // Highlighted wall
     if (this.closest && Wall.prototype.isPrototypeOf(this.closest)) {
-      const wall = this.closest;
-      const wall2 = this.map.walls[wall.point2];
-      const p1 = this.worldToScreen(wall.x, wall.y);
-      const p2 = this.worldToScreen(wall2.x, wall2.y);
-      const pc = this.worldToScreen(
-        wall.rendererMeta.centroid.x,
-        wall.rendererMeta.centroid.y
-      );
       this.ctx.strokeStyle = this.ctx.fillStyle =
-        `rgba(${getEditorColor(this.theme, "highlighted")},` +
-        (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
-        ")";
+      `rgba(${getEditorColor(this.theme, "highlighted")},` +
+      (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) +
+      ")";
       this.ctx.beginPath();
-      this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
-      this.drawNormal(
-        this.ctx,
-        wall,
-        normalIndicatorMagnitude,
-        normalIndicatorAngle,
-        p1.x,
-        p1.y,
-        p2.x,
-        p2.y,
-        pc.x,
-        pc.y,
-        true
-      );
-      this.drawClosestPointOnWall(
-        this.ctx,
-        normalIndicatorMagnitude,
-        normalIndicatorAngle,
-        p1.x,
-        p1.y,
-        p2.x,
-        p2.y,
-        true
-      );
+      const wall = this.closest;
+      const p1 = this.worldToScreen(wall.x, wall.y);
+      if (this.closest.rendererMeta.highlightedVertex) {
+        if (this._zoom > this.verticesZoomThreshold) {
+          this.ctx.rect(p1.x - 3, p1.y - 3, 5, 5);
+        }
+        else {
+          this.ctx.rect(p1.x - 1, p1.y - 1, 3, 3);
+        }
+      }
+      else {
+        const wall2 = this.map.walls[wall.point2];
+        const p2 = this.worldToScreen(wall2.x, wall2.y);
+        const pc = this.worldToScreen(
+          wall.rendererMeta.centroid.x,
+          wall.rendererMeta.centroid.y
+        );
+        this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
+        this.drawNormal(
+          this.ctx,
+          wall,
+          normalIndicatorMagnitude,
+          normalIndicatorAngle,
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          pc.x,
+          pc.y,
+          true
+        );
+        this.drawClosestPointOnWall(
+          this.ctx,
+          normalIndicatorMagnitude,
+          normalIndicatorAngle,
+          p1.x,
+          p1.y,
+          p2.x,
+          p2.y,
+          true
+        );
+      }
       this.ctx.stroke();
     }
 
@@ -725,7 +735,7 @@ export default class MapRenderer {
 
         wall.rendererMeta.centroid = centroid;
         wall.rendererMeta.boundingRadius = Point2.distance(
-          wall.rendererMetroid.centroid,
+          wall.rendererMeta.centroid,
           wall2Pos
         );
       }

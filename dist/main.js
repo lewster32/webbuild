@@ -71792,7 +71792,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 
 
-var UPDATE_RATE = 50; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
+var UPDATE_RATE = 100; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
 
 var MODE_PAN = 0;
 var MODE_SELECT = 1;
@@ -71891,7 +71891,7 @@ function () {
 
           var lastWall = newSelection;
 
-          if (_objects_wall__WEBPACK_IMPORTED_MODULE_2__["default"].prototype.isPrototypeOf(lastWall)) {
+          if (_objects_wall__WEBPACK_IMPORTED_MODULE_2__["default"].prototype.isPrototypeOf(lastWall) && !lastWall.rendererMeta.highlightedVertex) {
             this.selected.add(lastWall.editorMeta.wall2);
 
             if (lastWall.editorMeta.nextWall) {
@@ -71928,6 +71928,7 @@ function () {
             object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this2.renderer.interaction.panStart.y) / _this2.renderer.zoom) / snap);
           });
           this.metaDirty = true;
+          this.renderer.metaDirty = true;
         }
       }
 
@@ -71966,26 +71967,72 @@ function () {
   }, {
     key: "findClosestObject",
     value: function findClosestObject(pos) {
+      var closestVertex = this.findClosestVertex(pos);
       var closestWall = this.findClosestWall(pos);
       var closestSprite = this.findClosestSprite(pos);
       this.findCurrentSector(pos);
       var closest;
+      var candidates = [];
 
-      if (closestWall && closestSprite) {
-        var closestWallDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(_geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].closestPointOnLine(closestWall, this.map.walls[closestWall.point2], pos).point, pos);
-        var spritePos = closestSprite.clone();
-        var closestSpriteDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(spritePos, pos) - this.renderer.interaction.pointDistanceRadius;
-        closest = closestWallDistance < closestSpriteDistance ? closestWall : closestSprite;
-      } else if (closestSprite) {
-        closest = closestSprite;
-      } else if (closestWall) {
-        closest = closestWall;
+      if (closestVertex) {
+        candidates.push({
+          type: "vertex",
+          object: closestVertex,
+          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestVertex, pos) - this.renderer.interaction.pointDistanceRadius * 2
+        });
+      }
+
+      if (closestWall) {
+        candidates.push({
+          type: "wall",
+          object: closestWall,
+          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(_geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].closestPointOnLine(closestWall, this.map.walls[closestWall.point2], pos).point, pos)
+        });
+      }
+
+      if (closestSprite) {
+        candidates.push({
+          type: "sprite",
+          object: closestSprite,
+          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestSprite, pos) - this.renderer.interaction.pointDistanceRadius
+        });
+      }
+
+      if (candidates.length) {
+        closest = candidates.sort(function (a, b) {
+          return a.distance < b.distance ? -1 : 1;
+        })[0];
       }
 
       if (closest) {
-        closest.rendererMeta.highlighted = true;
+        if (closest.type === "vertex") {
+          closest.object.rendererMeta.highlightedVertex = true;
+        } else {
+          closest.object.rendererMeta.highlighted = true;
+        }
       }
 
+      return closest.object;
+    }
+  }, {
+    key: "findClosestVertex",
+    value: function findClosestVertex(pos) {
+      var distance = Number.POSITIVE_INFINITY;
+      var closest;
+      this.map.walls.forEach(function (wall) {
+        wall.rendererMeta.highlightedVertex = false;
+
+        if (wall.rendererMeta.clipped) {
+          return;
+        }
+
+        var wallDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(wall, pos);
+
+        if (wallDistance < distance) {
+          distance = wallDistance;
+          closest = wall;
+        }
+      });
       return closest;
     }
   }, {
@@ -72235,6 +72282,7 @@ function () {
     this.canvas = canvas;
     this.width = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerWidth();
     this.height = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerHeight();
+    this.metaDirty = false;
     jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).on("resize", function () {
       _this.width = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerWidth();
       _this.height = jquery__WEBPACK_IMPORTED_MODULE_0___default()(window).innerHeight();
@@ -72422,7 +72470,7 @@ function () {
           _this3.map.walls[wall.nextWall].rendererMeta.skip = true;
         }
 
-        var pc = _this3.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+        var pc = _this3.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
 
         var boundingRadius = wall.rendererMeta.boundingRadius * _this3._zoom;
 
@@ -72455,7 +72503,7 @@ function () {
           _this3.map.walls[wall.nextWall].rendererMeta.skip = true;
         }
 
-        var pc = _this3.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+        var pc = _this3.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
 
         var boundingRadius = wall.rendererMeta.boundingRadius * _this3._zoom;
 
@@ -72482,7 +72530,7 @@ function () {
       this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "outerWalls"), ",.8)");
       this.ctx.beginPath();
       solidWalls.forEach(function (wall) {
-        var pc = _this3.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+        var pc = _this3.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
 
         var boundingRadius = wall.rendererMeta.boundingRadius * _this3._zoom;
 
@@ -72521,16 +72569,26 @@ function () {
 
 
       if (this.closest && _objects_wall__WEBPACK_IMPORTED_MODULE_3__["default"].prototype.isPrototypeOf(this.closest)) {
-        var wall = this.closest;
-        var wall2 = this.map.walls[wall.point2];
-        var p1 = this.worldToScreen(wall.x, wall.y);
-        var p2 = this.worldToScreen(wall2.x, wall2.y);
-        var pc = this.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
         this.ctx.strokeStyle = this.ctx.fillStyle = "rgba(".concat(getEditorColor(this.theme, "highlighted"), ",") + (Math.sin(new Date().getTime() / 50) * 0.2 + 0.8) + ")";
         this.ctx.beginPath();
-        this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
-        this.drawNormal(this.ctx, wall, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, pc.x, pc.y, true);
-        this.drawClosestPointOnWall(this.ctx, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, true);
+        var wall = this.closest;
+        var p1 = this.worldToScreen(wall.x, wall.y);
+
+        if (this.closest.rendererMeta.highlightedVertex) {
+          if (this._zoom > this.verticesZoomThreshold) {
+            this.ctx.rect(p1.x - 3, p1.y - 3, 5, 5);
+          } else {
+            this.ctx.rect(p1.x - 1, p1.y - 1, 3, 3);
+          }
+        } else {
+          var wall2 = this.map.walls[wall.point2];
+          var p2 = this.worldToScreen(wall2.x, wall2.y);
+          var pc = this.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
+          this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
+          this.drawNormal(this.ctx, wall, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, pc.x, pc.y, true);
+          this.drawClosestPointOnWall(this.ctx, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, true);
+        }
+
         this.ctx.stroke();
       } // Selected wall(s)
 
@@ -72549,7 +72607,7 @@ function () {
 
           var p2 = _this3.worldToScreen(wall2.x, wall2.y);
 
-          var pc = _this3.worldToScreen(wall.editorMeta.centroid.x, wall.editorMeta.centroid.y);
+          var pc = _this3.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
 
           _this3.drawLine(_this3.ctx, p1.x, p1.y, p2.x, p2.y, true);
 
@@ -72753,7 +72811,9 @@ function () {
 
         if (wall2) {
           var wall2Pos = wall2.clone();
-          wall.rendererMeta.boundingRadius = _geom_point2__WEBPACK_IMPORTED_MODULE_5__["default"].distance(wall.editorMeta.centroid, wall2Pos);
+          var centroid = wall.clone().centroid(wall2Pos);
+          wall.rendererMeta.centroid = centroid;
+          wall.rendererMeta.boundingRadius = _geom_point2__WEBPACK_IMPORTED_MODULE_5__["default"].distance(wall.rendererMeta.centroid, wall2Pos);
         }
       });
       this.map.sectors.forEach(function (sector) {
@@ -72762,6 +72822,7 @@ function () {
       this.map.sprites.forEach(function (sprite) {
         sprite.rendererMeta = {};
       });
+      this.metaDirty = false;
     }
   }, {
     key: "renderGrid",
@@ -72873,6 +72934,10 @@ function () {
   }, {
     key: "render",
     value: function render() {
+      if (this.metaDirty) {
+        this.updateMetaData();
+      }
+
       if (this.map) {
         this.ctx.fillStyle = "rgb(".concat(getEditorColor(this.theme, "background"), ")");
         this.ctx.fillRect(0, 0, this.width, this.height);
@@ -73857,10 +73922,8 @@ function () {
   }, {
     key: "closestPointOnLine",
     value: function closestPointOnLine(startPoint, endPoint, point) {
-      var startToEnd = Point2.subtract(endPoint, startPoint); // new Point2(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
-
-      var startToPoint = Point2.subtract(point, startPoint); // new Point2(point.x - startPoint.x, point.y - startPoint.y);
-
+      var startToEnd = Point2.subtract(endPoint, startPoint);
+      var startToPoint = Point2.subtract(point, startPoint);
       var len = startToEnd.x * startToEnd.x + startToEnd.y * startToEnd.y;
       var dot = startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y;
       var t = Math.min(1, Math.max(0, dot / len));
@@ -73868,7 +73931,8 @@ function () {
       var pc = new Point2(startPoint.x + startToEnd.x * t, startPoint.y + startToEnd.y * t);
       return {
         point: pc,
-        dot: dot
+        dot: dot,
+        t: t
       };
     }
   }]);
@@ -74065,7 +74129,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _util_mapfilereader__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./util/mapfilereader */ "./src/util/mapfilereader.js");
 /* harmony import */ var _editor_editor__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor/editor */ "./src/editor/editor.js");
-/* harmony import */ var _editor_maprenderer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./editor/maprenderer */ "./src/editor/maprenderer.js");
+/* harmony import */ var _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor/maprenderer */ "./src/editor/maprenderer.js");
 /* harmony import */ var _editor_ui_ui_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./editor/ui/ui.js */ "./src/editor/ui/ui.js");
 
 
@@ -74076,7 +74140,7 @@ __webpack_require__.r(__webpack_exports__);
 // - https://github.com/jonof/jfbuild/blob/master/doc/buildinf.txt
 
 jquery__WEBPACK_IMPORTED_MODULE_0___default()(function () {
-  var renderer = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_5__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
+  var renderer = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
   var editor = new _editor_editor__WEBPACK_IMPORTED_MODULE_2__["default"](renderer);
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("canvas").hide();
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapfile").on("change", function (e) {

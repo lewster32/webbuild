@@ -68,8 +68,8 @@ export default class Point2 {
  * @returns {Object} an object containing the point and the dot product (to determine which side of the line the point was on)
  */
   static closestPointOnLine(startPoint, endPoint, point) {
-    const startToEnd = Point2.subtract(endPoint, startPoint); // new Point2(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
-    const startToPoint = Point2.subtract(point, startPoint); // new Point2(point.x - startPoint.x, point.y - startPoint.y);
+    const startToEnd = Point2.subtract(endPoint, startPoint);
+    const startToPoint = Point2.subtract(point, startPoint);
 
     const len = startToEnd.x * startToEnd.x + startToEnd.y * startToEnd.y;
     let dot = startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y;
@@ -82,7 +82,8 @@ export default class Point2 {
 
     return {
       point: pc,
-      dot: dot
+      dot: dot,
+      t: t
     }
   }
 };
