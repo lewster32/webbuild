@@ -45,6 +45,29 @@ export default class Point2 {
     return new Point2(this.x, this.y);
   }
 
+  copyFrom(point) {
+    this.x = point.x;
+    this.y = point.y;
+    return this;
+  }
+
+  static rotate(point, origin, angle) {
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+
+    const newPoint = Point2.subtract(point, origin);
+
+    const newX = newPoint.x * cos - newPoint.y * sin;
+    const newY = newPoint.x * sin + newPoint.y * cos;
+
+    newPoint.set(
+      newX + origin.x,
+      newY + origin.y
+    );
+
+    return newPoint;
+  }
+
   static subtract(p1, p2) {
     return p1.clone().subtract(p2);
   }

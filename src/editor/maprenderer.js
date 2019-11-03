@@ -22,7 +22,8 @@ const COLORS = {
     specialSprites: "255,128,0",
     sprites: "0,255,128",
     grid: "60,128,160",
-    gizmos: "60,128,160"
+    gizmos: "60,128,160",
+    player: "0,255,0",
   },
   classic: {
     background: "0,0,0",
@@ -35,7 +36,8 @@ const COLORS = {
     specialSprites: "255,255,255",
     sprites: "0,255,0",
     grid: "255,255,255",
-    gizmos: "255,255,255"
+    gizmos: "255,255,255",
+    player: "255,255,255"
   },
   retro: {
     background: "36,29,0",
@@ -48,7 +50,8 @@ const COLORS = {
     specialSprites: "0,163,239",
     sprites: "93,197,63",
     grid: "208,162,60",
-    gizmos: "208,162,60"
+    gizmos: "208,162,60",
+    player: "255,195,28",
   }
 };
 
@@ -164,6 +167,29 @@ export default class MapRenderer {
     );
     this.map = map;
     this._zoom = 1 / DIVIDER;
+  }
+
+  drawPosition(ctx, x0, y0, angle, radius, batched) {
+    ctx = ctx || this.ctx;
+    if (!batched) {
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.beginPath();
+    }
+
+    const origin = new Point2(x0, y0);
+
+    const p1 = Point2.rotate(new Point2(origin.x + radius, origin.y), origin, angle);
+    const p2 = Point2.rotate(new Point2(origin.x - radius, origin.y - (radius * .5)), origin, angle)
+    const p3 = Point2.rotate(new Point2(origin.x - radius, origin.y + (radius * .5)), origin, angle)
+
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.lineTo(p1.x, p1.y);
+
+    if (!batched) {
+      ctx.stroke();
+    }
   }
 
   drawLine(ctx, x1, y1, x2, y2, batched) {
@@ -706,6 +732,13 @@ export default class MapRenderer {
     }
   }
 
+  renderPlayer(ctx) {
+    const timer = new Date().getTime();
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "player")},` + (Math.sin(timer / 50) * 0.2 + 0.8) + ")";
+    const p1 = this.worldToScreen(this.map.editorMeta.player.x, this.map.editorMeta.player.y);
+    this.drawPosition(this.ctx, p1.x, p1.y, this.map.editorMeta.player.angleRadians, 128 * this.zoom);
+  }
+
   updateMapBuffer() {
     const wallClipPadding = 0;
     const spriteClipPadding = 32;
@@ -720,6 +753,15 @@ export default class MapRenderer {
     this.renderWalls(wallClipPadding, normalIndicatorMagnitude);
 
     this.renderSprites(spriteClipPadding, angleIndicatorMagnitude);
+
+    this.ctx.strokeStyle = this.ctx.fillStyle = `rgba(${getEditorColor(this.theme, "gizmos")},` + "1)";
+    const p1 = this.worldToScreen(this.map.startPosition.x, this.map.startPosition.y);
+    this.drawPosition(this.ctx, p1.x, p1.y, this.map.startPosition.angleRadians, 128 * this.zoom);
+
+    if (this.map.editorMeta.player) {
+      this.map.editorMeta.player.update();
+      this.renderPlayer(this.ctx);
+    }
   }
 
   gridSizeFromZoom() {

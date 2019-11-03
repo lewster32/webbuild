@@ -3,7 +3,7 @@ import $ from "jquery";
 import Point2 from "../geom/point2";
 
 import Wall from "../objects/wall";
-import Sprite from "../objects/sprite";
+import Player from "../objects/player";
 
 const UPDATE_RATE = 100; // editor update rate in ms (renderer still runs at requestAnimationFrame fps)
 
@@ -35,6 +35,12 @@ export default class Editor {
     $(this.renderer.canvas).on("mousewheel", e => {
       this.handleMouseWheel(e);
     });
+    $(document).on("keydown", e => {
+      this.handleKeyDown(e);
+    });
+    $(document).on("keyup", e => {
+      this.handleKeyUp(e);
+    });
 
     setTimeout(this.update.bind(this), UPDATE_RATE);
 
@@ -50,6 +56,46 @@ export default class Editor {
   onUpdate(callback) {
     this.callback = callback;
   }
+
+  handleKeyDown(e) {
+
+    if ([37,38,39,40].find(x => e.keyCode)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (e.keyCode === 37) {
+      this.map.editorMeta.player.turn(-1);
+    }
+    else if (e.keyCode === 39) {
+      this.map.editorMeta.player.turn(1);
+    }
+    if (e.keyCode === 38) {
+      this.map.editorMeta.player.move(1);
+    }
+    else if (e.keyCode === 40) {
+      this.map.editorMeta.player.move(-1);
+    }
+    
+    this.dirty = true;
+  }
+
+  handleKeyUp(e) {
+    if ([37,38,39,40].find(x => e.keyCode)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (e.keyCode === 37 || e.keyCode === 39) {
+      this.map.editorMeta.player.turn(0);
+    }
+    if (e.keyCode === 38 || e.keyCode === 40) {
+      this.map.editorMeta.player.move(0);
+    }
+    
+    this.dirty = true;
+  }
+
 
   handleMouseDown(e) {
     e.preventDefault();
@@ -397,6 +443,11 @@ export default class Editor {
       sprite.editorMeta.sector = this.map.sectors[sprite.currentSectorIndex];
       sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
     });
+
+    // If one hasn't been instantiated, create a player at the start position
+    if (!this.map.editorMeta.player) {
+      this.map.editorMeta.player = new Player().copyFrom(this.map.startPosition);
+    }
 
     this.metaDirty = false;
   }

@@ -13,5 +13,7 @@ export default class Map {
     this.sectors = []; // should be length<=1024
     this.walls = []; // should be length<=8192
     this.sprites = []; // should be length<=4096
+
+    this.editorMeta = {}
   }
 };
