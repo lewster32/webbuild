@@ -36,6 +36,19 @@ const COLORS = {
     sprites: "0,255,0",
     grid: "255,255,255",
     gizmos: "255,255,255"
+  },
+  retro: {
+    background: "36,29,0",
+    innerWalls: "208,162,60",
+    clipWalls: "155,50,157",
+    outerWalls: "222,189,122",
+    vertices: "255,132,18",
+    highlighted: "255,195,28",
+    selected: "255,255,255",
+    specialSprites: "0,163,239",
+    sprites: "93,197,63",
+    grid: "208,162,60",
+    gizmos: "208,162,60"
   }
 };
 
@@ -487,7 +500,7 @@ export default class MapRenderer {
       this.ctx.stroke();
     }
 
-    // Selected wall(s)
+    // Selected vert(ex/ices)
     if (this.selected) {
       const selectedWalls = this.selected.filter(wall => Wall.prototype.isPrototypeOf(wall));
       this.ctx.lineWidth = 2;
@@ -500,24 +513,36 @@ export default class MapRenderer {
         const wall2 = this.map.walls[wall.point2];
         const p1 = this.worldToScreen(wall.x, wall.y);
         const p2 = this.worldToScreen(wall2.x, wall2.y);
-        const pc = this.worldToScreen(
-          wall.rendererMeta.centroid.x,
-          wall.rendererMeta.centroid.y
-        );
-        this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
-        this.drawNormal(
-          this.ctx,
-          wall,
-          normalIndicatorMagnitude,
-          normalIndicatorAngle,
-          p1.x,
-          p1.y,
-          p2.x,
-          p2.y,
-          pc.x,
-          pc.y,
-          true
-        );
+
+        if (this._zoom > this.verticesZoomThreshold) {
+          this.ctx.rect(p1.x - 3, p1.y - 3, 5, 5);
+        }
+        else {
+          this.ctx.rect(p1.x - 1, p1.y - 1, 3, 3);
+        }
+
+          /*
+        else {
+          const pc = this.worldToScreen(
+            wall.rendererMeta.centroid.x,
+            wall.rendererMeta.centroid.y
+          );
+          this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
+          this.drawNormal(
+            this.ctx,
+            wall,
+            normalIndicatorMagnitude,
+            normalIndicatorAngle,
+            p1.x,
+            p1.y,
+            p2.x,
+            p2.y,
+            pc.x,
+            pc.y,
+            true
+          );
+        }
+        */
         this.drawClosestPointOnWall(
           this.ctx,
           normalIndicatorMagnitude,

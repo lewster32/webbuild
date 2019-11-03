@@ -70,6 +70,43 @@ export default class Editor {
     this.dirty = true;
   }
 
+  getRelatedWalls(wall) {
+    const relatedWalls = new Set();
+
+    let tmpWall = wall;
+    let prevWall;
+    let count = this.map.walls.length;
+    do {
+      // Search anti-clockwise
+      if (tmpWall.editorMeta.nextWall) {
+        tmpWall = tmpWall.editorMeta.nextWall.editorMeta.wall2;
+        relatedWalls.add(tmpWall);
+        console.log("AC", tmpWall);
+      }
+      else {
+        // Search clockwise
+        tmpWall = wall;
+        do {
+          prevWall = tmpWall.editorMeta.lastWall;
+          if (prevWall.editorMeta.nextWall) {
+            tmpWall = prevWall.editorMeta.nextWall;
+            relatedWalls.add(tmpWall);
+          }
+          else {
+            break;
+          }
+          console.log("CCW", tmpWall);
+          count--;
+        } while (tmpWall !== wall && count > 0);
+        break;
+      }
+      count--;
+    } while (tmpWall !== wall && count > 0);
+
+    console.log(relatedWalls);
+    return [...relatedWalls] || [];
+  }
+
   handleMouseUp(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -107,12 +144,11 @@ export default class Editor {
         }
         // const walls = [...this.selected];
         const lastWall = newSelection;
-        if (Wall.prototype.isPrototypeOf(lastWall) && !lastWall.rendererMeta.highlightedVertex) {
-          this.selected.add(lastWall.editorMeta.wall2);
-          if (lastWall.editorMeta.nextWall) {
-            this.selected.add(lastWall.editorMeta.nextWall);
-            this.selected.add(lastWall.editorMeta.nextWall.editorMeta.wall2);
-          }
+        if (Wall.prototype.isPrototypeOf(lastWall)) {
+          const relatedWalls = this.getRelatedWalls(lastWall);
+          relatedWalls.forEach(relatedWall => {
+            this.selected.add(relatedWall);
+          });
         }
 
         this.renderer.selected = [...this.selected];
@@ -343,10 +379,14 @@ export default class Editor {
       sector.editorMeta.walls.forEach(wall => {
         wall.editorMeta.loop = loop;
         wall.editorMeta.sector = sector;
-        if (wall.point2 < lastWallIndex) {
-          loop++;
+        if (lastWallIndex !== Number.POSITIVE_INFINITY) {
+          if (wall.point2 < lastWallIndex) {
+            wall.editorMeta.sector.editorMeta.lastWallIndex = lastWallIndex;
+            loop++;
+          }
         }
         lastWallIndex = wall.point2;
+        this.map.walls[lastWallIndex].editorMeta.lastWall = wall;
       });
 
       sector.editorMeta.numLoops = loop;

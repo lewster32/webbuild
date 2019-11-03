@@ -71856,8 +71856,51 @@ function () {
       this.dirty = true;
     }
   }, {
+    key: "getRelatedWalls",
+    value: function getRelatedWalls(wall) {
+      var relatedWalls = new Set();
+      var tmpWall = wall;
+      var prevWall;
+      var count = this.map.walls.length;
+
+      do {
+        // Search anti-clockwise
+        if (tmpWall.editorMeta.nextWall) {
+          tmpWall = tmpWall.editorMeta.nextWall.editorMeta.wall2;
+          relatedWalls.add(tmpWall);
+          console.log("AC", tmpWall);
+        } else {
+          // Search clockwise
+          tmpWall = wall;
+
+          do {
+            prevWall = tmpWall.editorMeta.lastWall;
+
+            if (prevWall.editorMeta.nextWall) {
+              tmpWall = prevWall.editorMeta.nextWall;
+              relatedWalls.add(tmpWall);
+            } else {
+              break;
+            }
+
+            console.log("CCW", tmpWall);
+            count--;
+          } while (tmpWall !== wall && count > 0);
+
+          break;
+        }
+
+        count--;
+      } while (tmpWall !== wall && count > 0);
+
+      console.log(relatedWalls);
+      return _toConsumableArray(relatedWalls) || [];
+    }
+  }, {
     key: "handleMouseUp",
     value: function handleMouseUp(e) {
+      var _this2 = this;
+
       e.preventDefault();
       e.stopPropagation();
       this.renderer.interaction.isDown = false;
@@ -71891,13 +71934,11 @@ function () {
 
           var lastWall = newSelection;
 
-          if (_objects_wall__WEBPACK_IMPORTED_MODULE_2__["default"].prototype.isPrototypeOf(lastWall) && !lastWall.rendererMeta.highlightedVertex) {
-            this.selected.add(lastWall.editorMeta.wall2);
-
-            if (lastWall.editorMeta.nextWall) {
-              this.selected.add(lastWall.editorMeta.nextWall);
-              this.selected.add(lastWall.editorMeta.nextWall.editorMeta.wall2);
-            }
+          if (_objects_wall__WEBPACK_IMPORTED_MODULE_2__["default"].prototype.isPrototypeOf(lastWall)) {
+            var relatedWalls = this.getRelatedWalls(lastWall);
+            relatedWalls.forEach(function (relatedWall) {
+              _this2.selected.add(relatedWall);
+            });
           }
 
           this.renderer.selected = _toConsumableArray(this.selected);
@@ -71909,7 +71950,7 @@ function () {
   }, {
     key: "handleMouseMove",
     value: function handleMouseMove(e) {
-      var _this2 = this;
+      var _this3 = this;
 
       this.renderer.interaction.mouseWorldPos = this.renderer.screenToWorld(e.offsetX, e.offsetY);
       this.renderer.interaction.mouseScreenPos.x = e.offsetX;
@@ -71924,8 +71965,8 @@ function () {
         if (this.selected.size > 0) {
           var snap = this.renderer.gridSizeFromZoom();
           this.selected.forEach(function (object) {
-            object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - _this2.renderer.interaction.panStart.x) / _this2.renderer.zoom) / snap);
-            object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this2.renderer.interaction.panStart.y) / _this2.renderer.zoom) / snap);
+            object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - _this3.renderer.interaction.panStart.x) / _this3.renderer.zoom) / snap);
+            object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this3.renderer.interaction.panStart.y) / _this3.renderer.zoom) / snap);
           });
           this.metaDirty = true;
           this.renderer.metaDirty = true;
@@ -71946,13 +71987,13 @@ function () {
   }, {
     key: "handleMouseWheel",
     value: function handleMouseWheel(e) {
-      var _this3 = this;
+      var _this4 = this;
 
       e.preventDefault();
       e.stopPropagation();
       this.dirty = true;
       this.renderer.changeZoom(e.originalEvent.deltaY > 0 ? 1 : -1, e, function () {
-        _this3.dirty = true;
+        _this4.dirty = true;
       });
     }
   }, {
@@ -72038,7 +72079,7 @@ function () {
   }, {
     key: "findClosestWall",
     value: function findClosestWall(pos) {
-      var _this4 = this;
+      var _this5 = this;
 
       var distance = Number.POSITIVE_INFINITY;
       var closest;
@@ -72049,7 +72090,7 @@ function () {
           return;
         }
 
-        var wallPos = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].closestPointOnLine(wall, _this4.map.walls[wall.point2], pos);
+        var wallPos = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].closestPointOnLine(wall, _this5.map.walls[wall.point2], pos);
 
         if (wallPos.dot < 1) {
           return;
@@ -72067,7 +72108,7 @@ function () {
   }, {
     key: "findClosestSprite",
     value: function findClosestSprite(pos) {
-      var _this5 = this;
+      var _this6 = this;
 
       if (this.renderer.zoom <= this.renderer.spritesZoomThreshold) {
         return;
@@ -72084,7 +72125,7 @@ function () {
 
         var spritePos = sprite.clone();
 
-        var spriteDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(spritePos, pos) - _this5.renderer.interaction.pointDistanceRadius;
+        var spriteDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(spritePos, pos) - _this6.renderer.interaction.pointDistanceRadius;
 
         if (spriteDistance < distance) {
           distance = spriteDistance;
@@ -72101,14 +72142,14 @@ function () {
   }, {
     key: "updateMetaData",
     value: function updateMetaData() {
-      var _this6 = this;
+      var _this7 = this;
 
       this.map.walls.forEach(function (wall, index) {
         wall.editorMeta = {
           type: "Wall"
         };
         wall.editorMeta.index = index;
-        var wall2 = _this6.map.walls[wall.point2];
+        var wall2 = _this7.map.walls[wall.point2];
 
         if (wall2) {
           var wall2Pos = wall2.clone();
@@ -72118,7 +72159,7 @@ function () {
         }
 
         if (wall.nextWall > -1) {
-          wall.editorMeta.nextWall = _this6.map.walls[wall.nextWall];
+          wall.editorMeta.nextWall = _this7.map.walls[wall.nextWall];
         }
       }); // Associate sectors with walls and vice versa
 
@@ -72127,7 +72168,7 @@ function () {
           type: "Sector"
         };
         sector.editorMeta.index = index;
-        sector.editorMeta.walls = _this6.map.walls.slice(sector.firstWallIndex, sector.firstWallIndex + sector.numWalls);
+        sector.editorMeta.walls = _this7.map.walls.slice(sector.firstWallIndex, sector.firstWallIndex + sector.numWalls);
         sector.editorMeta.sprites = [];
         var lastWallIndex = Number.POSITIVE_INFINITY;
         var loop = 1;
@@ -72135,11 +72176,15 @@ function () {
           wall.editorMeta.loop = loop;
           wall.editorMeta.sector = sector;
 
-          if (wall.point2 < lastWallIndex) {
-            loop++;
+          if (lastWallIndex !== Number.POSITIVE_INFINITY) {
+            if (wall.point2 < lastWallIndex) {
+              wall.editorMeta.sector.editorMeta.lastWallIndex = lastWallIndex;
+              loop++;
+            }
           }
 
           lastWallIndex = wall.point2;
+          _this7.map.walls[lastWallIndex].editorMeta.lastWall = wall;
         });
         sector.editorMeta.numLoops = loop;
       });
@@ -72148,7 +72193,7 @@ function () {
           type: "Sprite"
         };
         sprite.editorMeta.index = index;
-        sprite.editorMeta.sector = _this6.map.sectors[sprite.currentSectorIndex];
+        sprite.editorMeta.sector = _this7.map.sectors[sprite.currentSectorIndex];
         sprite.editorMeta.sector.editorMeta.sprites.push(sprite);
       });
       this.metaDirty = false;
@@ -72258,6 +72303,19 @@ var COLORS = {
     sprites: "0,255,0",
     grid: "255,255,255",
     gizmos: "255,255,255"
+  },
+  retro: {
+    background: "36,29,0",
+    innerWalls: "208,162,60",
+    clipWalls: "155,50,157",
+    outerWalls: "222,189,122",
+    vertices: "255,132,18",
+    highlighted: "255,195,28",
+    selected: "255,255,255",
+    specialSprites: "0,163,239",
+    sprites: "93,197,63",
+    grid: "208,162,60",
+    gizmos: "208,162,60"
   }
 };
 
@@ -72590,7 +72648,7 @@ function () {
         }
 
         this.ctx.stroke();
-      } // Selected wall(s)
+      } // Selected vert(ex/ices)
 
 
       if (this.selected) {
@@ -72607,11 +72665,34 @@ function () {
 
           var p2 = _this3.worldToScreen(wall2.x, wall2.y);
 
-          var pc = _this3.worldToScreen(wall.rendererMeta.centroid.x, wall.rendererMeta.centroid.y);
+          if (_this3._zoom > _this3.verticesZoomThreshold) {
+            _this3.ctx.rect(p1.x - 3, p1.y - 3, 5, 5);
+          } else {
+            _this3.ctx.rect(p1.x - 1, p1.y - 1, 3, 3);
+          }
+          /*
+          else {
+          const pc = this.worldToScreen(
+            wall.rendererMeta.centroid.x,
+            wall.rendererMeta.centroid.y
+          );
+          this.drawLine(this.ctx, p1.x, p1.y, p2.x, p2.y, true);
+          this.drawNormal(
+            this.ctx,
+            wall,
+            normalIndicatorMagnitude,
+            normalIndicatorAngle,
+            p1.x,
+            p1.y,
+            p2.x,
+            p2.y,
+            pc.x,
+            pc.y,
+            true
+          );
+          }
+          */
 
-          _this3.drawLine(_this3.ctx, p1.x, p1.y, p2.x, p2.y, true);
-
-          _this3.drawNormal(_this3.ctx, wall, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, pc.x, pc.y, true);
 
           _this3.drawClosestPointOnWall(_this3.ctx, normalIndicatorMagnitude, normalIndicatorAngle, p1.x, p1.y, p2.x, p2.y, true);
         });
