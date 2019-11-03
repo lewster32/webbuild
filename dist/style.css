@@ -5,12 +5,20 @@ html, body {
   font-size: 14px;
 }
 
-canvas {
+#mapcanvas {
   position: fixed;
   left: 0;
   top: 0;
   display: block;
   z-index: 1;
+}
+
+#gamecanvas {
+  position: fixed;
+  right: 0;
+  top: 0;
+  display: block;
+  z-index: 2;
 }
 
 input[type=file] {

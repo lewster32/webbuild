@@ -12,8 +12,9 @@ export const MODE_SELECT = 1;
 export const MODE_EDIT = 2;
 
 export default class Editor {
-  constructor(renderer) {
-    this.renderer = renderer;
+  constructor(renderer2d, renderer3d) {
+    this.renderer2d = renderer2d;
+    this.renderer3d = renderer3d;
 
     this.closest;
     this.currentSector;
@@ -23,16 +24,16 @@ export default class Editor {
     this.dirty = true;
     this.metaDirty = false;
 
-    $(this.renderer.canvas).on("mousedown", e => {
+    $(this.renderer2d.canvas).on("mousedown", e => {
       this.handleMouseDown(e);
     });
-    $(this.renderer.canvas).on("mouseup", e => {
+    $(this.renderer2d.canvas).on("mouseup", e => {
       this.handleMouseUp(e);
     });
-    $(this.renderer.canvas).on("mousemove", e => {
+    $(this.renderer2d.canvas).on("mousemove", e => {
       this.handleMouseMove(e);
     });
-    $(this.renderer.canvas).on("mousewheel", e => {
+    $(this.renderer2d.canvas).on("mousewheel", e => {
       this.handleMouseWheel(e);
     });
     $(document).on("keydown", e => {
@@ -101,9 +102,9 @@ export default class Editor {
     e.preventDefault();
     e.stopPropagation();
 
-    this.renderer.interaction.isDown = true;
+    this.renderer2d.interaction.isDown = true;
 
-    this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+    this.renderer2d.interaction.panStart.set(e.clientX, e.clientY);
 
     if (this.interaction.mode === MODE_SELECT) {  
       this.interaction.selectionTimer = new Date().getTime();
@@ -154,9 +155,9 @@ export default class Editor {
     e.preventDefault();
     e.stopPropagation();
 
-    this.renderer.interaction.isDown = false;
+    this.renderer2d.interaction.isDown = false;
 
-    this.renderer.interaction.panStart.set(0, 0);
+    this.renderer2d.interaction.panStart.set(0, 0);
 
     if (this.interaction.mode === MODE_SELECT) {  
       if (this.interaction.selectionTimer + this.interaction.selectionClickDuration > new Date().getTime()) {
@@ -194,7 +195,7 @@ export default class Editor {
           });
         }
 
-        this.renderer.selected = [...this.selected];
+        this.renderer2d.selected = [...this.selected];
       }
     }
 
@@ -202,37 +203,37 @@ export default class Editor {
   }
 
   handleMouseMove(e) {
-    this.renderer.interaction.mouseWorldPos = this.renderer.screenToWorld(
+    this.renderer2d.interaction.mouseWorldPos = this.renderer2d.screenToWorld(
       e.offsetX,
       e.offsetY
     );
-    this.renderer.interaction.mouseScreenPos.x = e.offsetX;
-    this.renderer.interaction.mouseScreenPos.y = e.offsetY;
+    this.renderer2d.interaction.mouseScreenPos.x = e.offsetX;
+    this.renderer2d.interaction.mouseScreenPos.y = e.offsetY;
 
     this.dirty = true;
 
-    if (!this.renderer.interaction.isDown) {
+    if (!this.renderer2d.interaction.isDown) {
       return;
     }
 
     if (this.interaction.mode === MODE_SELECT) {
       if (this.selected.size > 0) {
-        const snap = this.renderer.gridSizeFromZoom();
+        const snap = this.renderer2d.gridSizeFromZoom();
         this.selected.forEach(object => {
-          object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom) / snap);
-          object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom) / snap);
+          object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - this.renderer2d.interaction.panStart.x) / this.renderer2d.zoom) / snap);
+          object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - this.renderer2d.interaction.panStart.y) / this.renderer2d.zoom) / snap);
         });
         this.metaDirty = true;
-        this.renderer.metaDirty = true;
+        this.renderer2d.metaDirty = true;
       }
     }
 
     if (this.interaction.mode === MODE_PAN) {
-      this.renderer.interaction.panOffset.x -=
-        (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom;
-      this.renderer.interaction.panOffset.y -=
-        (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom;
-      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+      this.renderer2d.interaction.panOffset.x -=
+        (e.clientX - this.renderer2d.interaction.panStart.x) / this.renderer2d.zoom;
+      this.renderer2d.interaction.panOffset.y -=
+        (e.clientY - this.renderer2d.interaction.panStart.y) / this.renderer2d.zoom;
+      this.renderer2d.interaction.panStart.set(e.clientX, e.clientY);
     }
   }
 
@@ -246,16 +247,16 @@ export default class Editor {
 
     this.dirty = true;
 
-    this.renderer.changeZoom(e.originalEvent.deltaY > 0 ? 1 : -1, e, () => {
+    this.renderer2d.changeZoom(e.originalEvent.deltaY > 0 ? 1 : -1, e, () => {
       this.dirty = true;
     });
   }
 
   setMap(map) {
     this.map = map;
-    this.renderer.setMap(this.map);
+    this.renderer2d.setMap(this.map);
     this.updateMetaData();
-    this.renderer.updateMetaData();
+    this.renderer2d.updateMetaData();
     this.dirty = true;
   }
 
@@ -273,7 +274,7 @@ export default class Editor {
       candidates.push({
         type: "vertex",
         object: closestVertex,
-        distance: Point2.distanceSquared(closestVertex, pos) - (this.renderer.interaction.pointDistanceRadius * 2)
+        distance: Point2.distanceSquared(closestVertex, pos) - (this.renderer2d.interaction.pointDistanceRadius * 2)
       });
     }
 
@@ -293,7 +294,7 @@ export default class Editor {
       candidates.push({
         type: "sprite",
         object: closestSprite,
-        distance: Point2.distanceSquared(closestSprite, pos) - this.renderer.interaction.pointDistanceRadius
+        distance: Point2.distanceSquared(closestSprite, pos) - this.renderer2d.interaction.pointDistanceRadius
       });
     }
 
@@ -357,7 +358,7 @@ export default class Editor {
   }
 
   findClosestSprite(pos) {
-    if (this.renderer.zoom <= this.renderer.spritesZoomThreshold) {
+    if (this.renderer2d.zoom <= this.renderer2d.spritesZoomThreshold) {
       return;
     }
     let distance = Number.POSITIVE_INFINITY;
@@ -371,7 +372,7 @@ export default class Editor {
 
       const spriteDistance =
         Point2.distanceSquared(spritePos, pos) -
-        this.renderer.interaction.pointDistanceRadius;
+        this.renderer2d.interaction.pointDistanceRadius;
       if (spriteDistance < distance) {
         distance = spriteDistance;
         closest = sprite;
@@ -411,6 +412,7 @@ export default class Editor {
         type: "Sector"
       };
       sector.editorMeta.index = index;
+      sector.editorMeta.firstWall = this.map.walls[sector.firstWallIndex];
       sector.editorMeta.walls = this.map.walls.slice(
         sector.firstWallIndex,
         sector.firstWallIndex + sector.numWalls
@@ -460,19 +462,19 @@ export default class Editor {
       this.dirty = false;
       if (this.map) {
         const closest = this.findClosestObject(
-          this.renderer.interaction.mouseWorldPos
+          this.renderer2d.interaction.mouseWorldPos
         );
         const currentSector = this.findCurrentSector(
-          this.renderer.interaction.mouseWorldPos
+          this.renderer2d.interaction.mouseWorldPos
         );
         if (this.closest !== closest) {
-          this.closest = this.renderer.closest = closest;
+          this.closest = this.renderer2d.closest = closest;
           if (this.debug) {
             console.log(this.closest);
           }
         }
         if (this.currentSector !== currentSector) {
-          this.currentSector = this.renderer.currentSector = currentSector;
+          this.currentSector = this.renderer2d.currentSector = currentSector;
           if (this.debug) {
             console.log(this.currentSector);
           }

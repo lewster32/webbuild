@@ -14,6 +14,8 @@ export default class Map {
     this.walls = []; // should be length<=8192
     this.sprites = []; // should be length<=4096
 
+    this.startSectorIndex = -1;
+
     this.editorMeta = {}
   }
 };

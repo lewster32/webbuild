@@ -65,12 +65,10 @@ export default class MapFileReader {
     this.map.startPosition.z = read(view.getInt32);
     this.map.startPosition.angle = read(view.getInt16);
 
-    const startSector = read(view.getInt16); // not sure why we need this yet, so just capturing it for the sake of it
+    this.map.startSectorIndex = read(view.getInt16);
 
     const numSectors = read(view.getUint16);
-    const sectorSize = 40,
-      wallSize = 32,
-      spriteSize = 44;
+
     this.map.sectors = new Array(numSectors);
     for (let i = 0; i < numSectors; i++) {
       const sector = new Sector();

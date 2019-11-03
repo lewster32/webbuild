@@ -71801,27 +71801,28 @@ var MODE_EDIT = 2;
 var Editor =
 /*#__PURE__*/
 function () {
-  function Editor(renderer) {
+  function Editor(renderer2d, renderer3d) {
     var _this = this;
 
     _classCallCheck(this, Editor);
 
-    this.renderer = renderer;
+    this.renderer2d = renderer2d;
+    this.renderer3d = renderer3d;
     this.closest;
     this.currentSector;
     this.selected = new Set();
     this.dirty = true;
     this.metaDirty = false;
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer.canvas).on("mousedown", function (e) {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer2d.canvas).on("mousedown", function (e) {
       _this.handleMouseDown(e);
     });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer.canvas).on("mouseup", function (e) {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer2d.canvas).on("mouseup", function (e) {
       _this.handleMouseUp(e);
     });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer.canvas).on("mousemove", function (e) {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer2d.canvas).on("mousemove", function (e) {
       _this.handleMouseMove(e);
     });
-    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer.canvas).on("mousewheel", function (e) {
+    jquery__WEBPACK_IMPORTED_MODULE_0___default()(this.renderer2d.canvas).on("mousewheel", function (e) {
       _this.handleMouseWheel(e);
     });
     jquery__WEBPACK_IMPORTED_MODULE_0___default()(document).on("keydown", function (e) {
@@ -71893,8 +71894,8 @@ function () {
     value: function handleMouseDown(e) {
       e.preventDefault();
       e.stopPropagation();
-      this.renderer.interaction.isDown = true;
-      this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+      this.renderer2d.interaction.isDown = true;
+      this.renderer2d.interaction.panStart.set(e.clientX, e.clientY);
 
       if (this.interaction.mode === MODE_SELECT) {
         this.interaction.selectionTimer = new Date().getTime();
@@ -71950,8 +71951,8 @@ function () {
 
       e.preventDefault();
       e.stopPropagation();
-      this.renderer.interaction.isDown = false;
-      this.renderer.interaction.panStart.set(0, 0);
+      this.renderer2d.interaction.isDown = false;
+      this.renderer2d.interaction.panStart.set(0, 0);
 
       if (this.interaction.mode === MODE_SELECT) {
         if (this.interaction.selectionTimer + this.interaction.selectionClickDuration > new Date().getTime()) {
@@ -71988,7 +71989,7 @@ function () {
             });
           }
 
-          this.renderer.selected = _toConsumableArray(this.selected);
+          this.renderer2d.selected = _toConsumableArray(this.selected);
         }
       }
 
@@ -71999,31 +72000,31 @@ function () {
     value: function handleMouseMove(e) {
       var _this3 = this;
 
-      this.renderer.interaction.mouseWorldPos = this.renderer.screenToWorld(e.offsetX, e.offsetY);
-      this.renderer.interaction.mouseScreenPos.x = e.offsetX;
-      this.renderer.interaction.mouseScreenPos.y = e.offsetY;
+      this.renderer2d.interaction.mouseWorldPos = this.renderer2d.screenToWorld(e.offsetX, e.offsetY);
+      this.renderer2d.interaction.mouseScreenPos.x = e.offsetX;
+      this.renderer2d.interaction.mouseScreenPos.y = e.offsetY;
       this.dirty = true;
 
-      if (!this.renderer.interaction.isDown) {
+      if (!this.renderer2d.interaction.isDown) {
         return;
       }
 
       if (this.interaction.mode === MODE_SELECT) {
         if (this.selected.size > 0) {
-          var snap = this.renderer.gridSizeFromZoom();
+          var snap = this.renderer2d.gridSizeFromZoom();
           this.selected.forEach(function (object) {
-            object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - _this3.renderer.interaction.panStart.x) / _this3.renderer.zoom) / snap);
-            object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this3.renderer.interaction.panStart.y) / _this3.renderer.zoom) / snap);
+            object.x = snap * Math.round((object.editorTemp.oldPos.x + (e.clientX - _this3.renderer2d.interaction.panStart.x) / _this3.renderer2d.zoom) / snap);
+            object.y = snap * Math.round((object.editorTemp.oldPos.y + (e.clientY - _this3.renderer2d.interaction.panStart.y) / _this3.renderer2d.zoom) / snap);
           });
           this.metaDirty = true;
-          this.renderer.metaDirty = true;
+          this.renderer2d.metaDirty = true;
         }
       }
 
       if (this.interaction.mode === MODE_PAN) {
-        this.renderer.interaction.panOffset.x -= (e.clientX - this.renderer.interaction.panStart.x) / this.renderer.zoom;
-        this.renderer.interaction.panOffset.y -= (e.clientY - this.renderer.interaction.panStart.y) / this.renderer.zoom;
-        this.renderer.interaction.panStart.set(e.clientX, e.clientY);
+        this.renderer2d.interaction.panOffset.x -= (e.clientX - this.renderer2d.interaction.panStart.x) / this.renderer2d.zoom;
+        this.renderer2d.interaction.panOffset.y -= (e.clientY - this.renderer2d.interaction.panStart.y) / this.renderer2d.zoom;
+        this.renderer2d.interaction.panStart.set(e.clientX, e.clientY);
       }
     }
   }, {
@@ -72039,7 +72040,7 @@ function () {
       e.preventDefault();
       e.stopPropagation();
       this.dirty = true;
-      this.renderer.changeZoom(e.originalEvent.deltaY > 0 ? 1 : -1, e, function () {
+      this.renderer2d.changeZoom(e.originalEvent.deltaY > 0 ? 1 : -1, e, function () {
         _this4.dirty = true;
       });
     }
@@ -72047,9 +72048,9 @@ function () {
     key: "setMap",
     value: function setMap(map) {
       this.map = map;
-      this.renderer.setMap(this.map);
+      this.renderer2d.setMap(this.map);
       this.updateMetaData();
-      this.renderer.updateMetaData();
+      this.renderer2d.updateMetaData();
       this.dirty = true;
     }
   }, {
@@ -72066,7 +72067,7 @@ function () {
         candidates.push({
           type: "vertex",
           object: closestVertex,
-          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestVertex, pos) - this.renderer.interaction.pointDistanceRadius * 2
+          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestVertex, pos) - this.renderer2d.interaction.pointDistanceRadius * 2
         });
       }
 
@@ -72082,7 +72083,7 @@ function () {
         candidates.push({
           type: "sprite",
           object: closestSprite,
-          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestSprite, pos) - this.renderer.interaction.pointDistanceRadius
+          distance: _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(closestSprite, pos) - this.renderer2d.interaction.pointDistanceRadius
         });
       }
 
@@ -72157,7 +72158,7 @@ function () {
     value: function findClosestSprite(pos) {
       var _this6 = this;
 
-      if (this.renderer.zoom <= this.renderer.spritesZoomThreshold) {
+      if (this.renderer2d.zoom <= this.renderer2d.spritesZoomThreshold) {
         return;
       }
 
@@ -72172,7 +72173,7 @@ function () {
 
         var spritePos = sprite.clone();
 
-        var spriteDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(spritePos, pos) - _this6.renderer.interaction.pointDistanceRadius;
+        var spriteDistance = _geom_point2__WEBPACK_IMPORTED_MODULE_1__["default"].distanceSquared(spritePos, pos) - _this6.renderer2d.interaction.pointDistanceRadius;
 
         if (spriteDistance < distance) {
           distance = spriteDistance;
@@ -72215,6 +72216,7 @@ function () {
           type: "Sector"
         };
         sector.editorMeta.index = index;
+        sector.editorMeta.firstWall = _this7.map.walls[sector.firstWallIndex];
         sector.editorMeta.walls = _this7.map.walls.slice(sector.firstWallIndex, sector.firstWallIndex + sector.numWalls);
         sector.editorMeta.sprites = [];
         var lastWallIndex = Number.POSITIVE_INFINITY;
@@ -72261,11 +72263,11 @@ function () {
         this.dirty = false;
 
         if (this.map) {
-          var closest = this.findClosestObject(this.renderer.interaction.mouseWorldPos);
-          var currentSector = this.findCurrentSector(this.renderer.interaction.mouseWorldPos);
+          var closest = this.findClosestObject(this.renderer2d.interaction.mouseWorldPos);
+          var currentSector = this.findCurrentSector(this.renderer2d.interaction.mouseWorldPos);
 
           if (this.closest !== closest) {
-            this.closest = this.renderer.closest = closest;
+            this.closest = this.renderer2d.closest = closest;
 
             if (this.debug) {
               console.log(this.closest);
@@ -72273,7 +72275,7 @@ function () {
           }
 
           if (this.currentSector !== currentSector) {
-            this.currentSector = this.renderer.currentSector = currentSector;
+            this.currentSector = this.renderer2d.currentSector = currentSector;
 
             if (this.debug) {
               console.log(this.currentSector);
@@ -72293,6 +72295,103 @@ function () {
   }]);
 
   return Editor;
+}();
+
+
+
+/***/ }),
+
+/***/ "./src/editor/gamerenderer.js":
+/*!************************************!*\
+  !*** ./src/editor/gamerenderer.js ***!
+  \************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return GameRenderer; });
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
+/* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+
+
+var GameRenderer =
+/*#__PURE__*/
+function () {
+  function GameRenderer(canvas) {
+    _classCallCheck(this, GameRenderer);
+
+    this.debug = true;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d", {
+      alpha: false
+    });
+    this.map = null;
+    this.width = jquery__WEBPACK_IMPORTED_MODULE_0___default()(canvas).width();
+    this.height = jquery__WEBPACK_IMPORTED_MODULE_0___default()(canvas).height();
+    this.dirty = true;
+  }
+
+  _createClass(GameRenderer, [{
+    key: "setMap",
+    value: function setMap(map) {
+      this.map = map;
+    }
+  }, {
+    key: "updateGameBuffer",
+    value: function updateGameBuffer() {
+      if (this.map.startSectorIndex < 0) {
+        return;
+      } // const visibleBunches = findVisibleBunches(this.map.sectors[this.map.startSectorIndex])
+
+    }
+  }, {
+    key: "findVisibleBunches",
+    value: function findVisibleBunches(sector) {
+      var _this = this;
+
+      var bunches = [];
+      var sectorsToVisit = new Set();
+      sectorsToVisit.add(sector);
+      var numSectorsLeftToScan = this.map.sectors.length;
+
+      do {
+        var currentSector = sectorsToVisit.pop();
+        currentSector.rendererMeta.visited = true;
+        currentSector.editorMeta.walls.forEach(function (wall) {
+          var p1 = wall.clone();
+          var p2 = wall.editorMeta.wall2.clone();
+
+          if (wall.nextSector >= 0 && !wall.stat.oneWay && !_this.map.sectors[wall.nextSector].rendererMeta.visited) {
+            var cross = p1.x * p2.y - p2.x * p1.y; // No idea...
+
+            if (cross + 262144 < 524288) {
+              sectorsToVisit.add(_this.map.sectors[wall.nextSector]);
+            }
+          }
+        });
+        numSectorsLeftToScan--;
+      } while (numSectorsLeftToScan > 0 && sectorsToVisit.length);
+    }
+  }, {
+    key: "render",
+    value: function render() {
+      if (this.dirty && this.map) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.updateGameBuffer();
+      }
+
+      requestAnimationFrame(this.render.bind(this));
+    }
+  }]);
+
+  return GameRenderer;
 }();
 
 
@@ -74365,6 +74464,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _editor_editor__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor/editor */ "./src/editor/editor.js");
 /* harmony import */ var _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor/maprenderer */ "./src/editor/maprenderer.js");
 /* harmony import */ var _editor_ui_ui_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./editor/ui/ui.js */ "./src/editor/ui/ui.js");
+/* harmony import */ var _editor_gamerenderer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./editor/gamerenderer */ "./src/editor/gamerenderer.js");
+
 
 
 
@@ -74374,8 +74475,9 @@ __webpack_require__.r(__webpack_exports__);
 // - https://github.com/jonof/jfbuild/blob/master/doc/buildinf.txt
 
 jquery__WEBPACK_IMPORTED_MODULE_0___default()(function () {
-  var renderer = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
-  var editor = new _editor_editor__WEBPACK_IMPORTED_MODULE_2__["default"](renderer);
+  var renderer2d = new _editor_maprenderer__WEBPACK_IMPORTED_MODULE_3__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapcanvas")[0]);
+  var renderer3d = new _editor_gamerenderer__WEBPACK_IMPORTED_MODULE_5__["default"](jquery__WEBPACK_IMPORTED_MODULE_0___default()("#gamecanvas")[0]);
+  var editor = new _editor_editor__WEBPACK_IMPORTED_MODULE_2__["default"](renderer2d, renderer3d);
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("canvas").hide();
   jquery__WEBPACK_IMPORTED_MODULE_0___default()("#mapfile").on("change", function (e) {
     var files = e.target.files;
@@ -74513,6 +74615,7 @@ var Map = function Map(version) {
 
   this.sprites = []; // should be length<=4096
 
+  this.startSectorIndex = -1;
   this.editorMeta = {};
 };
 
@@ -75071,12 +75174,8 @@ function () {
       this.map.startPosition.y = read(view.getInt32);
       this.map.startPosition.z = read(view.getInt32);
       this.map.startPosition.angle = read(view.getInt16);
-      var startSector = read(view.getInt16); // not sure why we need this yet, so just capturing it for the sake of it
-
+      this.map.startSectorIndex = read(view.getInt16);
       var numSectors = read(view.getUint16);
-      var sectorSize = 40,
-          wallSize = 32,
-          spriteSize = 44;
       this.map.sectors = new Array(numSectors);
 
       for (var i = 0; i < numSectors; i++) {
