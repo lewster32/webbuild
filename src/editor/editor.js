@@ -255,8 +255,11 @@ export default class Editor {
   setMap(map) {
     this.map = map;
     this.renderer2d.setMap(this.map);
+    this.renderer3d.setMap(this.map);
     this.updateMetaData();
     this.renderer2d.updateMetaData();
+    this.renderer3d.updateMetaData();
+    
     this.dirty = true;
   }
 

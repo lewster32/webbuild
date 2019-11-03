@@ -72049,8 +72049,10 @@ function () {
     value: function setMap(map) {
       this.map = map;
       this.renderer2d.setMap(this.map);
+      this.renderer3d.setMap(this.map);
       this.updateMetaData();
       this.renderer2d.updateMetaData();
+      this.renderer3d.updateMetaData();
       this.dirty = true;
     }
   }, {
@@ -72313,6 +72315,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return GameRenderer; });
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js");
 /* harmony import */ var jquery__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(jquery__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _geom_point3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../geom/point3 */ "./src/geom/point3.js");
+/* harmony import */ var _geom_position__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../geom/position */ "./src/geom/position.js");
+/* harmony import */ var _geom_point2__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../geom/point2 */ "./src/geom/point2.js");
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -72320,6 +72325,22 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 
+
+
+
+
+var cross = function cross(x1, y1, x2, y2) {
+  return x1 * y2 - y1 * x2;
+};
+
+var intersect = function intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+  var x = cross(x1, y1, x2, y2);
+  var y = cross(x3, y3, x4, y4);
+  var det = cross(x1 - x2, y1 - y2, x3 - x4, y3 - y4);
+  x = cross(x, x1 - x2, y, x3 - x4) / det;
+  y = cross(x, y1 - y2, y, y3 - y4) / det;
+  return new _geom_point2__WEBPACK_IMPORTED_MODULE_3__["default"](x, y);
+};
 
 var GameRenderer =
 /*#__PURE__*/
@@ -72335,7 +72356,9 @@ function () {
     this.map = null;
     this.width = jquery__WEBPACK_IMPORTED_MODULE_0___default()(canvas).width();
     this.height = jquery__WEBPACK_IMPORTED_MODULE_0___default()(canvas).height();
+    this.fov = new _geom_point2__WEBPACK_IMPORTED_MODULE_3__["default"](1 * 0.73 * this.height / this.width, .2);
     this.dirty = true;
+    requestAnimationFrame(this.render.bind(this));
   }
 
   _createClass(GameRenderer, [{
@@ -72346,15 +72369,93 @@ function () {
   }, {
     key: "updateGameBuffer",
     value: function updateGameBuffer() {
+      var _this = this;
+
       if (this.map.startSectorIndex < 0) {
         return;
-      } // const visibleBunches = findVisibleBunches(this.map.sectors[this.map.startSectorIndex])
+      }
 
+      var sector = this.map.sectors[this.map.startSectorIndex];
+      var playerPos = this.map.editorMeta.player;
+      var playerAngleCos = Math.cos(playerPos.angleRadians);
+      var playerAngleSin = Math.sin(playerPos.angleRadians);
+      this.ctx.strokeStyle = "#fff";
+      this.ctx.beginPath();
+      this.map.walls.forEach(function (wall) {
+        // Translate
+        var v1 = wall.clone().subtract(playerPos);
+        var v2 = wall.editorMeta.wall2.clone().subtract(playerPos); // Rotate
+
+        var t1 = new _geom_point3__WEBPACK_IMPORTED_MODULE_1__["default"](v1.x * playerAngleSin - v1.y * playerAngleCos, 0, v1.x * playerAngleCos + v1.y * playerAngleSin);
+        var t2 = new _geom_point3__WEBPACK_IMPORTED_MODULE_1__["default"](v2.x * playerAngleSin - v2.y * playerAngleCos, 0, v2.x * playerAngleCos + v2.y * playerAngleSin); // Clip
+
+        if (t1.z <= 0 && t2.z <= 0) {
+          return;
+        }
+
+        if (t1.z <= 0 || t2.z <= 0) {
+          var i1 = intersect(t1.x, t1.z, t2.x, t2.z, -0.0001, 0.0001, -20, 5);
+          var i2 = intersect(t1.x, t1.z, t2.x, t2.z, 0.0001, 0.0001, 20, 5);
+
+          if (t1.z <= 0) {
+            if (i1.y > 0) {
+              t1.x = i1.x;
+              t1.z = i1.y;
+            } else {
+              t1.x = i2.x;
+              t1.z = i2.y;
+            }
+          }
+
+          if (t2.z <= 0) {
+            if (i1.y > 0) {
+              t2.x = i1.x;
+              t2.z = i1.y;
+            } else {
+              t2.x = i2.x;
+              t2.z = i2.y;
+            }
+          }
+        } // Perspective
+
+
+        var multiplier = 6;
+        var wallHeight = wall.editorMeta.sector.ceiling.z * multiplier;
+        var floorHeight = wall.editorMeta.sector.floor.z * multiplier;
+        var fov = 64 * multiplier;
+        var x1 = -t1.x * fov / t1.z;
+        var y1a = wallHeight / t1.z;
+        var y1b = floorHeight / t1.z;
+        var x2 = -t2.x * fov / t2.z;
+        var y2a = wallHeight / t2.z;
+        var y2b = floorHeight / t2.z;
+
+        _this.ctx.moveTo(_this.width * .5 + x1, _this.height * .5 + y1b);
+
+        _this.ctx.lineTo(_this.width * .5 + x2, _this.height * .5 + y2b);
+
+        _this.ctx.moveTo(_this.width * .5 + x1, _this.height * .5 + y1a);
+
+        _this.ctx.lineTo(_this.width * .5 + x2, _this.height * .5 + y2a);
+
+        _this.ctx.moveTo(_this.width * .5 + x1, _this.height * .5 + y1a);
+
+        _this.ctx.lineTo(_this.width * .5 + x1, _this.height * .5 + y1b);
+
+        _this.ctx.moveTo(_this.width * .5 + x2, _this.height * .5 + y2a);
+
+        _this.ctx.lineTo(_this.width * .5 + x2, _this.height * .5 + y2b);
+      });
+      this.ctx.stroke();
+    }
+  }, {
+    key: "updateMetaData",
+    value: function updateMetaData() {// noop
     }
   }, {
     key: "findVisibleBunches",
     value: function findVisibleBunches(sector) {
-      var _this = this;
+      var _this2 = this;
 
       var bunches = [];
       var sectorsToVisit = new Set();
@@ -72368,12 +72469,9 @@ function () {
           var p1 = wall.clone();
           var p2 = wall.editorMeta.wall2.clone();
 
-          if (wall.nextSector >= 0 && !wall.stat.oneWay && !_this.map.sectors[wall.nextSector].rendererMeta.visited) {
-            var cross = p1.x * p2.y - p2.x * p1.y; // No idea...
+          if (wall.nextSector >= 0 && !wall.stat.oneWay && !_this2.map.sectors[wall.nextSector].rendererMeta.visited) {
+            var _cross = p1.x * p2.y - p2.x * p1.y; // to finish...
 
-            if (cross + 262144 < 524288) {
-              sectorsToVisit.add(_this.map.sectors[wall.nextSector]);
-            }
           }
         });
         numSectorsLeftToScan--;
