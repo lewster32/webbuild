@@ -8,7 +8,7 @@ import Sprite from "../objects/sprite";
 
 import Point2 from "../geom/point2";
 
-const DIVIDER = Math.pow(2, 7);
+const DIVIDER = 128; // How much we need to scale the map units down to make things more manageable
 
 const COLORS = {
   default: {

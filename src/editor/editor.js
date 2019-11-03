@@ -81,7 +81,6 @@ export default class Editor {
       if (tmpWall.editorMeta.nextWall) {
         tmpWall = tmpWall.editorMeta.nextWall.editorMeta.wall2;
         relatedWalls.add(tmpWall);
-        console.log("AC", tmpWall);
       }
       else {
         // Search clockwise
@@ -95,7 +94,6 @@ export default class Editor {
           else {
             break;
           }
-          console.log("CCW", tmpWall);
           count--;
         } while (tmpWall !== wall && count > 0);
         break;
@@ -103,7 +101,6 @@ export default class Editor {
       count--;
     } while (tmpWall !== wall && count > 0);
 
-    console.log(relatedWalls);
     return [...relatedWalls] || [];
   }
 
