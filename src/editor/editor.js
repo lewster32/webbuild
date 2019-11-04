@@ -464,6 +464,13 @@ export default class Editor {
     if (this.dirty) {
       this.dirty = false;
       if (this.map) {
+        if (this.map.editorMeta.player) {
+          const player = this.map.editorMeta.player;
+          const currentSector = this.findCurrentSector(new Point2().copyFrom(player));
+          if (currentSector) {
+            player.currentSector = currentSector;
+          }
+        }
         const closest = this.findClosestObject(
           this.renderer2d.interaction.mouseWorldPos
         );

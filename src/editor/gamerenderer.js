@@ -1,6 +1,7 @@
 import $ from "jquery";
+import * as dat from "dat.gui";
+
 import Point3 from "../geom/point3";
-import Position from "../geom/position";
 import Point2 from "../geom/point2";
 
 const cross = function(x1, y1, x2, y2) {
@@ -36,6 +37,23 @@ export default class GameRenderer {
 
     this.dirty = true;
 
+    this.fov = 255;
+
+    // I don't know what these do but they're involved in the intersection
+    // routine. I've tuned the values below which seem to give a good,
+    // minimally glitchy output to the 3D window
+    this.smallNum = 0.0022;
+    this.mediumNum = 1;
+    this.bigNum = 255;
+
+    if (this.debug) {
+      const gui = new dat.GUI();
+      gui.add(this, 'fov', 1, 512);
+      gui.add(this, 'smallNum', 0, 1, .00001);
+      gui.add(this, 'mediumNum', 1, 64);
+      gui.add(this, 'bigNum', 1, 255);
+    }
+
     requestAnimationFrame(this.render.bind(this));
   }
 
@@ -50,16 +68,16 @@ export default class GameRenderer {
 
     const sector = this.map.sectors[this.map.startSectorIndex];
 
-    const playerPos = this.map.editorMeta.player;
-    const playerAngleCos = Math.cos(playerPos.angleRadians);
-    const playerAngleSin = Math.sin(playerPos.angleRadians);
+    const player = this.map.editorMeta.player;
+    const playerAngleCos = Math.cos(player.angleRadians);
+    const playerAngleSin = Math.sin(player.angleRadians);
 
     this.ctx.strokeStyle = "#fff";
     this.ctx.beginPath();
     this.map.walls.forEach(wall => {
       // Translate
-      const v1 = wall.clone().subtract(playerPos);
-      const v2 = wall.editorMeta.wall2.clone().subtract(playerPos);
+      const v1 = wall.clone().subtract(player);
+      const v2 = wall.editorMeta.wall2.clone().subtract(player);
 
       // Rotate
       const t1 = new Point3(
@@ -73,13 +91,14 @@ export default class GameRenderer {
         v2.x * playerAngleCos + v2.y * playerAngleSin
       );
 
-      // Clip
+      // If the wall is behind the player, don't render it
       if (t1.z <= 0 && t2.z <= 0) {
         return;
       }
+      // If only part of the wall is behind the player, clip the edge to the player's view frustrum
       if (t1.z <= 0 || t2.z <= 0) {
-        const i1 = intersect(t1.x, t1.z, t2.x, t2.z, -0.0001, 0.0001, -20, 5);
-        const i2 = intersect(t1.x, t1.z, t2.x, t2.z, 0.0001, 0.0001, 20, 5);
+        const i1 = intersect(t1.x, t1.z, t2.x, t2.z, -this.smallNum, this.smallNum, -this.bigNum, this.mediumNum);
+        const i2 = intersect(t1.x, t1.z, t2.x, t2.z, this.smallNum, this.smallNum, this.bigNum, this.mediumNum);
 
         if (t1.z <= 0) { 
           if (i1.y > 0) {
@@ -105,32 +124,26 @@ export default class GameRenderer {
       }
 
       // Perspective
-      const multiplier = 6;
-      const wallHeight = wall.editorMeta.sector.ceiling.z * multiplier;
-      const floorHeight = wall.editorMeta.sector.floor.z * multiplier;
-      const fov = 64 * multiplier;
+      // From buildinf.txt: "Note: Z coordinates are all shifted up 4"
+      const wallHeight = (wall.editorMeta.sector.ceiling.z - player.z + player.eyeHeight) << 3;
+      const floorHeight = (wall.editorMeta.sector.floor.z - player.z + player.eyeHeight) << 3;
 
-      const x1 = -t1.x * fov / t1.z; 
+      const x1 = -t1.x * this.fov / t1.z; 
       const y1a = wallHeight / t1.z;
       const y1b = floorHeight / t1.z;
 
-      const x2 = -t2.x * fov / t2.z; 
+      const x2 = -t2.x * this.fov / t2.z; 
       const y2a = wallHeight / t2.z;
       const y2b = floorHeight / t2.z;
 
+      const halfWidth = this.width * .5;
+      const halfHeight = this.height * .5;
 
-      this.ctx.moveTo((this.width * .5) + x1, (this.height * .5) + y1b);
-      this.ctx.lineTo((this.width * .5) + x2, (this.height * .5) + y2b);
-
-
-      this.ctx.moveTo((this.width * .5) + x1, (this.height * .5) + y1a);
-      this.ctx.lineTo((this.width * .5) + x2, (this.height * .5) + y2a);
-
-      this.ctx.moveTo((this.width * .5) + x1, (this.height * .5) + y1a);
-      this.ctx.lineTo((this.width * .5) + x1, (this.height * .5) + y1b);
-
-      this.ctx.moveTo((this.width * .5) + x2, (this.height * .5) + y2a);
-      this.ctx.lineTo((this.width * .5) + x2, (this.height * .5) + y2b);
+      this.ctx.moveTo(halfWidth + x1, halfHeight + y1b);
+      this.ctx.lineTo(halfWidth + x2, halfHeight + y2b);
+      this.ctx.lineTo(halfWidth + x2, halfHeight + y2a);
+      this.ctx.lineTo(halfWidth + x1, halfHeight + y1a);
+      this.ctx.lineTo(halfWidth + x1, halfHeight + y1b);
     });
     this.ctx.stroke();
   }

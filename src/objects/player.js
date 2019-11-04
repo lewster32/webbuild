@@ -11,6 +11,10 @@ export default class Player extends Position {
 
     this.turnDelta = 0;
     this.moveDelta = 0;
+
+    this.currentSector;
+
+    this.eyeHeight = 16384;
   }
 
   set(x = 0, y = 0, z = 0, angle = 0) {
@@ -29,6 +33,9 @@ export default class Player extends Position {
     if (this.angularVelocity !== 0) {
       this.angularVelocity *= .8;
       this.angle += this.angularVelocity;
+    }
+    if (this.currentSector) {
+      this.z = this.currentSector.floor.z;
     }
   }
 

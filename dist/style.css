@@ -16,7 +16,7 @@ html, body {
 #gamecanvas {
   position: fixed;
   right: 0;
-  top: 0;
+  bottom: 0;
   display: block;
   z-index: 2;
 }
@@ -24,4 +24,8 @@ html, body {
 input[type=file] {
   float: right;
   margin: 1em;
+}
+
+.dg.ac {
+  z-index: 1000 !important;
 }
