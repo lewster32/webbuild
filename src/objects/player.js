@@ -1,7 +1,7 @@
 import Position from '../geom/position';
 
 const TURN_SPEED = 4;
-const MOVE_SPEED = 6;
+const MOVE_SPEED = 12;
 
 export default class Player extends Position {
   constructor(x, y, z, angle = 0) {
@@ -14,7 +14,7 @@ export default class Player extends Position {
 
     this.currentSector;
 
-    this.eyeHeight = 16384;
+    this.eyeHeight = 10240;
   }
 
   set(x = 0, y = 0, z = 0, angle = 0) {

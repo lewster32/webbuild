@@ -74899,7 +74899,7 @@ function () {
   function GameRenderer(canvas) {
     _classCallCheck(this, GameRenderer);
 
-    this.debug = true;
+    this.debug = false;
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", {
       alpha: false
@@ -74988,13 +74988,13 @@ function () {
         // From buildinf.txt: "Note: Z coordinates are all shifted up 4"
 
 
-        var wallHeight = wall.editorMeta.sector.ceiling.z - player.z + player.eyeHeight << 3;
-        var floorHeight = wall.editorMeta.sector.floor.z - player.z + player.eyeHeight << 3;
+        var ceilingHeight = wall.editorMeta.sector.ceiling.z - player.z + player.eyeHeight << 4;
+        var floorHeight = wall.editorMeta.sector.floor.z - player.z + player.eyeHeight << 4;
         var x1 = -t1.x * _this.fov / t1.z;
-        var y1a = wallHeight / t1.z;
+        var y1a = ceilingHeight / t1.z;
         var y1b = floorHeight / t1.z;
         var x2 = -t2.x * _this.fov / t2.z;
-        var y2a = wallHeight / t2.z;
+        var y2a = ceilingHeight / t2.z;
         var y2b = floorHeight / t2.z;
         var halfWidth = _this.width * .5;
         var halfHeight = _this.height * .5;
@@ -75003,11 +75003,14 @@ function () {
 
         _this.ctx.lineTo(halfWidth + x2, halfHeight + y2b);
 
-        _this.ctx.lineTo(halfWidth + x2, halfHeight + y2a);
+        if (!wall.editorMeta.nextWall) {
+          _this.ctx.lineTo(halfWidth + x2, halfHeight + y2a);
 
-        _this.ctx.lineTo(halfWidth + x1, halfHeight + y1a);
+          _this.ctx.lineTo(halfWidth + x1, halfHeight + y1a);
 
-        _this.ctx.lineTo(halfWidth + x1, halfHeight + y1b);
+          _this.ctx.lineTo(halfWidth + x1, halfHeight + y1b);
+        } else {// ??? profit
+        }
       });
       this.ctx.stroke();
     }
@@ -77320,7 +77323,7 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 
 var TURN_SPEED = 4;
-var MOVE_SPEED = 6;
+var MOVE_SPEED = 12;
 
 var Player =
 /*#__PURE__*/
@@ -77340,7 +77343,7 @@ function (_Position) {
     _this.turnDelta = 0;
     _this.moveDelta = 0;
     _this.currentSector;
-    _this.eyeHeight = 16384;
+    _this.eyeHeight = 10240;
     return _this;
   }
 

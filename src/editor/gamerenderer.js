@@ -20,7 +20,7 @@ const intersect = function(x1, y1, x2, y2, x3, y3, x4, y4) {
 
 export default class GameRenderer {
   constructor(canvas) {
-    this.debug = true;
+    this.debug = false;
 
     this.canvas = canvas;
 
@@ -125,15 +125,15 @@ export default class GameRenderer {
 
       // Perspective
       // From buildinf.txt: "Note: Z coordinates are all shifted up 4"
-      const wallHeight = (wall.editorMeta.sector.ceiling.z - player.z + player.eyeHeight) << 3;
-      const floorHeight = (wall.editorMeta.sector.floor.z - player.z + player.eyeHeight) << 3;
+      const ceilingHeight = (wall.editorMeta.sector.ceiling.z - player.z + player.eyeHeight) << 4;
+      const floorHeight = (wall.editorMeta.sector.floor.z - player.z + player.eyeHeight) << 4;
 
       const x1 = -t1.x * this.fov / t1.z; 
-      const y1a = wallHeight / t1.z;
+      const y1a = ceilingHeight / t1.z;
       const y1b = floorHeight / t1.z;
 
       const x2 = -t2.x * this.fov / t2.z; 
-      const y2a = wallHeight / t2.z;
+      const y2a = ceilingHeight / t2.z;
       const y2b = floorHeight / t2.z;
 
       const halfWidth = this.width * .5;
@@ -141,9 +141,14 @@ export default class GameRenderer {
 
       this.ctx.moveTo(halfWidth + x1, halfHeight + y1b);
       this.ctx.lineTo(halfWidth + x2, halfHeight + y2b);
-      this.ctx.lineTo(halfWidth + x2, halfHeight + y2a);
-      this.ctx.lineTo(halfWidth + x1, halfHeight + y1a);
-      this.ctx.lineTo(halfWidth + x1, halfHeight + y1b);
+      if (!wall.editorMeta.nextWall) {
+        this.ctx.lineTo(halfWidth + x2, halfHeight + y2a);
+        this.ctx.lineTo(halfWidth + x1, halfHeight + y1a);
+        this.ctx.lineTo(halfWidth + x1, halfHeight + y1b);
+      }
+      else {
+        // ??? profit
+      }
     });
     this.ctx.stroke();
   }
